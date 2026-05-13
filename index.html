@@ -1,1757 +1,1274 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Home Designer 3D — AI Powered</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Image Generator</title>
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    :root {
+      --bg:#0f0f13; --surface:#1a1a24; --surface2:#22222f;
+      --border:#2e2e42; --accent:#7c6fff; --accent2:#a78bfa;
+      --green:#34d399; --yellow:#fbbf24; --red:#f87171;
+      --text:#e8e8f0; --muted:#8888a8; --radius:14px;
+    }
+    body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
 
-  :root {
-    --bg: #0f1117;
-    --panel: #1a1d27;
-    --panel2: #21253a;
-    --border: #2e3250;
-    --accent: #4f7cff;
-    --accent2: #ff6b35;
-    --gold: #f0c040;
-    --text: #e8eaf0;
-    --text2: #8b90b0;
-    --success: #3dd68c;
-    --sidebar-w: 240px;
-    --topbar-h: 56px;
-  }
+    /* ── Header ── */
+    header { background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460); border-bottom:1px solid var(--border); padding:13px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    .logo { display:flex; align-items:center; gap:9px; }
+    .logo-icon { width:35px; height:35px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:16px; }
+    .logo h1 { font-size:1.15rem; font-weight:700; }
+    .logo span { color:var(--accent2); }
+    .header-right { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+    .lang-switcher { display:flex; gap:3px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:3px; }
+    .lang-btn { padding:4px 10px; border:none; border-radius:5px; font-size:0.77rem; font-weight:600; cursor:pointer; transition:all .2s; background:transparent; color:var(--muted); }
+    .lang-btn.active { background:var(--accent); color:#fff; }
+    .lang-btn:hover:not(.active) { background:var(--surface2); color:var(--text); }
+    .user-area { display:flex; align-items:center; gap:6px; }
+    .user-chip { background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:4px 12px 4px 4px; font-size:0.79rem; font-weight:600; color:var(--accent2); display:flex; align-items:center; gap:6px; }
+    .user-avatar { width:24px; height:24px; border-radius:50%; object-fit:cover; }
+    .user-avatar-placeholder { width:24px; height:24px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; font-weight:700; }
+    .header-btn { padding:5px 12px; border-radius:7px; font-size:0.77rem; font-weight:600; cursor:pointer; transition:all .2s; border:1px solid var(--border); background:var(--surface2); color:var(--text); }
+    .header-btn:hover { border-color:var(--accent); color:var(--accent2); }
+    .header-btn.login-btn { background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; color:#fff; }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* ── Usage bar ── */
+    .usage-bar-wrap { background:var(--surface); border-bottom:1px solid var(--border); padding:5px 20px; display:none; align-items:center; gap:9px; }
+    .usage-bar-wrap.show { display:flex; }
+    .usage-label { font-size:0.72rem; color:var(--muted); white-space:nowrap; }
+    .usage-bar-bg { flex:1; height:5px; background:var(--border); border-radius:3px; overflow:hidden; }
+    .usage-bar-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--green),var(--accent)); transition:width .4s; }
+    .usage-bar-fill.warning { background:linear-gradient(90deg,var(--yellow),var(--red)); }
+    .usage-count { font-size:0.72rem; color:var(--text); font-weight:600; white-space:nowrap; }
 
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    overflow: hidden;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
+    /* ── Tabs ── */
+    .tabs { display:flex; border-bottom:1px solid var(--border); padding:0 20px; background:var(--surface); overflow-x:auto; }
+    .tab-btn { padding:10px 14px; border:none; background:transparent; color:var(--muted); font-size:0.82rem; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; transition:all .2s; white-space:nowrap; display:flex; align-items:center; gap:5px; }
+    .tab-btn.active { color:var(--accent2); border-bottom-color:var(--accent); }
+    .tab-btn:hover:not(.active) { color:var(--text); }
+    .tab-badge { background:var(--accent); color:#fff; font-size:0.6rem; font-weight:700; padding:1px 5px; border-radius:8px; }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
 
-  /* TOP BAR */
-  #topbar {
-    height: var(--topbar-h);
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 0 16px;
-    z-index: 100;
-    flex-shrink: 0;
-  }
+    /* ── Layout ── */
+    main { max-width:1200px; margin:0 auto; padding:18px; display:grid; grid-template-columns:385px 1fr; gap:18px; align-items:start; }
+    @media (max-width:800px) { main { grid-template-columns:1fr; } }
 
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 16px;
-    color: var(--text);
-    white-space: nowrap;
-  }
-  .logo-icon {
-    width: 32px; height: 32px;
-    background: linear-gradient(135deg, var(--accent), #7b5fff);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-  }
-  .badge {
-    background: linear-gradient(135deg, var(--accent), #7b5fff);
-    color: white;
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 20px;
-    letter-spacing: 0.5px;
-  }
+    /* ── Panel ── */
+    .panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+    .panel-header { padding:12px 16px; border-bottom:1px solid var(--border); background:var(--surface2); font-weight:600; font-size:0.78rem; color:var(--accent2); text-transform:uppercase; letter-spacing:.06em; display:flex; align-items:center; gap:6px; }
+    .panel-body { padding:16px; }
 
-  .sep { width: 1px; height: 28px; background: var(--border); margin: 0 4px; }
+    /* ── Form ── */
+    label { display:block; font-size:0.73rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:5px; }
+    textarea, input[type="text"], input[type="password"], select { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:0.87rem; padding:8px 11px; font-family:inherit; transition:border-color .2s; }
+    textarea { resize:vertical; min-height:88px; }
+    textarea:focus, input:focus, select:focus { outline:none; border-color:var(--accent); }
+    select option { background:var(--surface2); }
+    .form-group { margin-bottom:13px; }
+    .char-count { font-size:0.68rem; color:var(--muted); text-align:right; margin-top:3px; }
 
-  .preset-btn {
-    padding: 6px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--panel2);
-    color: var(--text2);
-    font-size: 12px;
-    font-family: 'DM Sans', sans-serif;
-    cursor: pointer;
-    transition: all 0.15s;
-    font-weight: 500;
-  }
-  .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+    /* ── Prompt row ── */
+    .prompt-row { position:relative; }
+    .prompt-actions { display:flex; gap:5px; margin-top:5px; }
+    .prompt-action-btn { flex:1; padding:6px 7px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; color:var(--muted); font-size:0.73rem; font-weight:600; cursor:pointer; transition:all .18s; display:flex; align-items:center; justify-content:center; gap:3px; }
+    .prompt-action-btn:hover { border-color:var(--accent); color:var(--text); }
+    .autocomplete-box { position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--surface2); border:1px solid var(--accent); border-radius:8px; overflow:hidden; display:none; box-shadow:0 8px 24px rgba(0,0,0,.4); }
+    .autocomplete-item { padding:7px 11px; cursor:pointer; font-size:0.83rem; transition:background .15s; display:flex; align-items:center; gap:6px; }
+    .autocomplete-item:hover { background:rgba(124,111,255,.15); }
 
-  .top-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    /* ── Lang hint ── */
+    .lang-hint { background:rgba(124,111,255,.07); border:1px solid rgba(124,111,255,.22); border-radius:8px; padding:8px 11px; font-size:0.76rem; color:var(--accent2); margin-bottom:12px; }
 
-  .icon-btn {
-    width: 34px; height: 34px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--panel2);
-    color: var(--text2);
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px;
-    transition: all 0.15s;
-  }
-  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+    /* ── Style/Size grid ── */
+    .style-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:5px; }
+    .style-card { background:var(--bg); border:1px solid var(--border); border-radius:7px; padding:7px 9px; cursor:pointer; transition:all .18s; display:flex; align-items:center; gap:6px; font-size:0.78rem; color:var(--muted); user-select:none; }
+    .style-card:hover,.style-card.active { border-color:var(--accent); color:var(--text); }
+    .style-card.active { background:rgba(124,111,255,.12); }
+    .size-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:5px; }
+    .size-card { background:var(--bg); border:1px solid var(--border); border-radius:7px; padding:7px; cursor:pointer; transition:all .18s; font-size:0.76rem; color:var(--muted); text-align:center; }
+    .size-card:hover,.size-card.active { border-color:var(--accent); color:var(--text); }
+    .size-card.active { background:rgba(124,111,255,.12); }
 
-  .action-btn {
-    padding: 7px 16px;
-    border-radius: 8px;
-    border: none;
-    background: var(--accent);
-    color: white;
-    font-size: 12px;
-    font-family: 'DM Sans', sans-serif;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .action-btn:hover { background: #3d6be8; transform: translateY(-1px); }
-  .action-btn.danger { background: #e84545; }
-  .action-btn.danger:hover { background: #c73333; }
+    /* ── Generate btn ── */
+    #generateBtn { width:100%; padding:12px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; border-radius:8px; color:#fff; font-size:0.93rem; font-weight:700; cursor:pointer; transition:all .2s; margin-top:5px; }
+    #generateBtn:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 8px 24px rgba(124,111,255,.4); }
+    #generateBtn:disabled { opacity:.6; cursor:not-allowed; transform:none; }
 
-  /* MAIN LAYOUT */
-  #main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
+    /* ── Result ── */
+    .result-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:300px; color:var(--muted); text-align:center; gap:10px; }
+    .result-placeholder .big-icon { font-size:46px; opacity:.2; }
+    #resultImage { width:100%; border-radius:9px; display:none; }
 
-  /* LEFT SIDEBAR */
-  #sidebar {
-    width: var(--sidebar-w);
-    background: var(--panel);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    flex-shrink: 0;
-  }
+    /* ── Translation badge ── */
+    #translationBadge { display:none; margin-bottom:11px; border-radius:8px; overflow:hidden; border:1px solid rgba(52,211,153,.3); }
+    .badge-header { background:rgba(52,211,153,.1); padding:7px 11px; display:flex; align-items:center; gap:6px; font-size:0.76rem; font-weight:600; color:var(--green); }
+    .badge-body { background:rgba(52,211,153,.03); padding:7px 11px; font-size:0.73rem; color:var(--muted); }
+    .badge-body .en-prompt { color:var(--text); font-style:italic; margin-top:2px; }
 
-  .sidebar-section {
-    padding: 10px 12px 4px;
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--text2);
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-  }
+    /* ── Image actions ── */
+    .image-actions { display:flex; gap:5px; margin-top:9px; flex-wrap:wrap; }
+    .action-btn { flex:1; min-width:70px; padding:8px 5px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; color:var(--text); font-size:0.74rem; font-weight:600; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:3px; }
+    .action-btn:hover { border-color:var(--accent); background:rgba(124,111,255,.1); }
+    .action-btn.fav-active { border-color:var(--red); color:var(--red); background:rgba(248,113,113,.08); }
+    .action-btn.active-feature { border-color:var(--accent); color:var(--accent2); background:rgba(124,111,255,.12); }
 
-  .obj-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px;
-    padding: 4px 8px;
-  }
+    /* ── Meta chips ── */
+    .image-meta { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:9px; }
+    .meta-chip { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:5px 7px; text-align:center; }
+    .meta-label { font-size:0.63rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+    .meta-value { font-size:0.77rem; font-weight:600; margin-top:1px; }
 
-  .obj-item {
-    padding: 8px 6px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--panel2);
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.15s;
-    font-size: 11px;
-    color: var(--text2);
-  }
-  .obj-item:hover { border-color: var(--accent); color: var(--text); background: rgba(79,124,255,0.1); }
-  .obj-item .obj-icon { font-size: 20px; display: block; margin-bottom: 3px; }
-  .obj-item .obj-name { font-size: 10px; line-height: 1.2; }
+    /* ── Feature panels ── */
+    .feature-panel { margin-top:10px; background:var(--surface2); border:1px solid var(--border); border-radius:9px; padding:12px; display:none; }
+    .feature-panel.show { display:block; }
+    .feature-panel h3 { font-size:0.79rem; font-weight:700; color:var(--accent2); margin-bottom:10px; display:flex; align-items:center; gap:5px; }
+    .feature-row { display:flex; gap:7px; align-items:flex-end; flex-wrap:wrap; margin-bottom:9px; }
+    .feature-row .form-group { flex:1; min-width:100px; margin-bottom:0; }
+    .feature-btn { padding:8px 13px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; border-radius:7px; color:#fff; font-size:0.78rem; font-weight:700; cursor:pointer; transition:all .2s; white-space:nowrap; }
+    .feature-btn:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 14px rgba(124,111,255,.4); }
+    .feature-btn:disabled { opacity:.55; cursor:not-allowed; transform:none; }
+    .variations-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:9px; margin-top:9px; }
+    .variation-card { border-radius:8px; overflow:hidden; border:1px solid var(--border); }
+    .variation-card img { width:100%; display:block; }
+    .variation-card-footer { padding:6px 8px; display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; color:var(--muted); }
+    .var-dl { background:none; border:none; color:var(--accent2); cursor:pointer; font-size:0.7rem; font-weight:600; }
+    .compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:9px; }
+    .compare-card { border-radius:8px; overflow:hidden; border:1px solid var(--border); }
+    .compare-card img { width:100%; display:block; }
+    .compare-card-label { padding:6px 9px; font-size:0.75rem; font-weight:600; background:var(--surface2); display:flex; justify-content:space-between; }
+    .process-result { margin-top:9px; }
+    .process-result img { width:100%; border-radius:8px; border:1px solid var(--accent); }
+    .process-result-info { font-size:0.75rem; color:var(--muted); margin-top:5px; display:flex; justify-content:space-between; align-items:center; }
+    .wm-options { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:9px; }
+    .wm-options .form-group { margin-bottom:0; }
+    input[type="range"] { flex:1; accent-color:var(--accent); }
 
-  .sidebar-scroll {
-    flex: 1;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
+    /* ── Spinner ── */
+    .spinner { display:none; flex-direction:column; align-items:center; justify-content:center; min-height:240px; gap:13px; color:var(--muted); }
+    .spinner-ring { width:42px; height:42px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .spinner-steps { font-size:0.78rem; text-align:center; line-height:1.9; }
+    .spinner-steps .step.active { color:var(--accent2); font-weight:600; }
+    .spinner-steps .step.done { color:var(--green); }
+    .mini-spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:4px; }
 
-  /* 3D CANVAS */
-  #canvas-wrap {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-  }
+    /* ── Error ── */
+    .error-box { display:none; background:rgba(248,113,113,.07); border:1px solid rgba(248,113,113,.3); border-radius:8px; padding:10px; color:var(--red); font-size:0.81rem; }
 
-  #three-canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
+    /* ── Auth Modal ── */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.78); z-index:1000; display:none; align-items:center; justify-content:center; padding:20px; }
+    .modal-overlay.show { display:flex; }
+    .modal { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:24px; width:100%; max-width:360px; position:relative; }
+    .modal h2 { font-size:1.05rem; font-weight:700; margin-bottom:18px; text-align:center; }
+    .modal-tabs { display:flex; margin-bottom:18px; background:var(--bg); border-radius:8px; padding:3px; gap:0; }
+    .modal-tab { flex:1; padding:7px; border:none; background:transparent; color:var(--muted); font-size:0.81rem; font-weight:600; cursor:pointer; border-radius:6px; transition:all .2s; }
+    .modal-tab.active { background:var(--accent); color:#fff; }
+    .modal-close { position:absolute; top:12px; right:12px; background:none; border:none; color:var(--muted); font-size:1.1rem; cursor:pointer; }
+    .modal-close:hover { color:var(--text); }
+    .modal-btn { width:100%; padding:10px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; border-radius:8px; color:#fff; font-size:0.87rem; font-weight:700; cursor:pointer; margin-top:4px; transition:all .2s; }
+    .modal-btn:hover { transform:translateY(-1px); }
+    .modal-error   { background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.3); border-radius:7px; padding:8px 10px; color:var(--red); font-size:0.77rem; margin-bottom:11px; display:none; }
+    .modal-success { background:rgba(52,211,153,.1); border:1px solid rgba(52,211,153,.3); border-radius:7px; padding:8px 10px; color:var(--green); font-size:0.77rem; margin-bottom:11px; display:none; }
 
-  /* HUD overlays */
-  #hud-tl {
-    position: absolute;
-    top: 12px; left: 12px;
-    display: flex; flex-direction: column; gap: 6px;
-    pointer-events: none;
-  }
+    /* ── Google button ── */
+    .google-btn { width:100%; padding:10px; background:#fff; border:1px solid #dadce0; border-radius:8px; color:#3c4043; font-size:0.87rem; font-weight:600; cursor:pointer; margin-bottom:14px; display:flex; align-items:center; justify-content:center; gap:9px; transition:all .2s; }
+    .google-btn:hover { background:#f8f9fa; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+    .google-icon { width:18px; height:18px; }
+    .divider { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+    .divider-line { flex:1; height:1px; background:var(--border); }
+    .divider-text { font-size:0.72rem; color:var(--muted); white-space:nowrap; }
 
-  .hud-chip {
-    background: rgba(26,29,39,0.9);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 11px;
-    color: var(--text2);
-    backdrop-filter: blur(10px);
-    pointer-events: all;
-  }
-  .hud-chip span { color: var(--text); font-weight: 600; }
+    /* ── Gallery ── */
+    .gallery-page { padding:18px 20px; }
+    .gallery-page h2 { font-size:0.98rem; font-weight:700; margin-bottom:13px; }
+    .gallery-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(175px,1fr)); gap:10px; }
+    .gallery-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; transition:all .2s; }
+    .gallery-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+    .gallery-card img { width:100%; aspect-ratio:1; object-fit:cover; display:block; }
+    .gallery-card-body { padding:8px 10px; }
+    .gallery-card-prompt { font-size:0.73rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .gallery-card-meta { font-size:0.65rem; color:var(--muted); margin-top:3px; display:flex; justify-content:space-between; }
+    .gallery-card-actions { display:flex; gap:4px; margin-top:6px; }
+    .gallery-mini-btn { flex:1; padding:4px; background:var(--surface2); border:1px solid var(--border); border-radius:5px; color:var(--muted); font-size:0.67rem; cursor:pointer; transition:all .15s; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; }
+    .gallery-mini-btn:hover { border-color:var(--accent); color:var(--text); }
+    .empty-gallery { text-align:center; color:var(--muted); padding:44px 20px; }
+    .empty-gallery .ei { font-size:40px; opacity:.16; margin-bottom:9px; }
 
-  #hud-br {
-    position: absolute;
-    bottom: 14px; right: 14px;
-    display: flex; flex-direction: column; gap: 6px;
-    align-items: flex-end;
-  }
+    /* ── Profile ── */
+    .profile-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin:18px 20px; }
+    .profile-box h2 { font-size:0.98rem; font-weight:700; margin-bottom:13px; display:flex; align-items:center; gap:9px; }
+    .profile-avatar { width:40px; height:40px; border-radius:50%; object-fit:cover; }
+    .profile-avatar-placeholder { width:40px; height:40px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-size:16px; color:#fff; font-weight:700; }
+    .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:14px; }
+    .stat-card { background:var(--bg); border:1px solid var(--border); border-radius:9px; padding:11px; text-align:center; }
+    .stat-number { font-size:1.35rem; font-weight:700; color:var(--accent2); }
+    .stat-label { font-size:0.69rem; color:var(--muted); margin-top:3px; }
+    .plan-badge { display:inline-block; padding:3px 11px; border-radius:10px; font-size:0.73rem; font-weight:700; margin-bottom:13px; }
+    .plan-free { background:rgba(136,136,168,.15); color:var(--muted); }
+    .plan-pro  { background:rgba(124,111,255,.2); color:var(--accent2); }
+    .logout-btn { padding:8px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--red); font-size:0.81rem; font-weight:600; cursor:pointer; transition:all .2s; }
+    .logout-btn:hover { border-color:var(--red); background:rgba(248,113,113,.08); }
+    .google-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(66,133,244,.1); border:1px solid rgba(66,133,244,.3); border-radius:6px; padding:3px 9px; font-size:0.72rem; color:#4285f4; margin-bottom:13px; }
 
-  .cam-controls {
-    display: flex;
-    gap: 4px;
-  }
-  .cam-btn {
-    width: 36px; height: 36px;
-    border-radius: 8px;
-    background: rgba(26,29,39,0.9);
-    border: 1px solid var(--border);
-    color: var(--text2);
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-    backdrop-filter: blur(10px);
-    transition: all 0.15s;
-  }
-  .cam-btn:hover { border-color: var(--accent); color: var(--accent); }
+    /* ── API Keys ── */
+    .api-section { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin:0 20px 18px; }
+    .api-section h3 { font-size:.86rem; font-weight:700; color:var(--accent2); margin-bottom:4px; }
+    .api-section p { font-size:.77rem; color:var(--muted); margin-bottom:13px; }
+    .api-key-row { display:flex; gap:7px; margin-bottom:9px; align-items:center; flex-wrap:wrap; }
+    .api-key-input { flex:1; min-width:180px; background:var(--bg); border:1px solid var(--border); border-radius:7px; color:var(--text); font-size:.74rem; padding:6px 9px; font-family:monospace; }
+    .api-key-label { font-size:.71rem; color:var(--muted); flex-shrink:0; min-width:60px; }
+    .api-mini-btn { padding:5px 11px; border-radius:6px; font-size:.73rem; font-weight:600; cursor:pointer; transition:all .2s; border:1px solid var(--border); background:var(--surface2); color:var(--text); white-space:nowrap; }
+    .api-mini-btn:hover { border-color:var(--accent); color:var(--accent2); }
+    .api-mini-btn.danger { color:var(--red); }
+    .api-mini-btn.danger:hover { border-color:var(--red); background:rgba(248,113,113,.08); }
+    .api-docs-box { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:11px; font-size:.74rem; color:var(--muted); font-family:monospace; margin-top:11px; line-height:1.7; }
+    .api-docs-box .hl { color:var(--accent2); }
 
-  /* RIGHT PANEL */
-  #right-panel {
-    width: 280px;
-    background: var(--panel);
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    overflow: hidden;
-  }
+    /* ── Login prompt ── */
+    .login-prompt { background:rgba(124,111,255,.07); border:1px solid rgba(124,111,255,.22); border-radius:9px; padding:13px 15px; text-align:center; margin:18px 20px; }
+    .login-prompt p { font-size:0.83rem; color:var(--muted); margin-bottom:10px; }
+    .login-prompt button { padding:7px 18px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; border-radius:7px; color:#fff; font-size:0.81rem; font-weight:600; cursor:pointer; }
 
-  .rpanel-header {
-    padding: 14px 16px 10px;
-    border-bottom: 1px solid var(--border);
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 600;
-    font-size: 14px;
-    display: flex; align-items: center; gap: 8px;
-  }
+    /* ── Share popup ── */
+    .share-popup { position:fixed; bottom:66px; right:20px; background:var(--surface2); border:1px solid var(--accent); border-radius:10px; padding:13px 15px; max-width:300px; z-index:999; display:none; box-shadow:0 8px 24px rgba(0,0,0,.5); }
+    .share-popup.show { display:block; }
+    .share-popup h4 { font-size:0.81rem; font-weight:700; margin-bottom:8px; color:var(--accent2); }
+    .share-link-box { display:flex; gap:5px; }
+    .share-link-box input { flex:1; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:0.73rem; padding:5px 8px; }
+    .share-link-box button { padding:5px 10px; background:var(--accent); border:none; border-radius:6px; color:#fff; font-size:0.73rem; font-weight:600; cursor:pointer; }
+    .share-popup-close { position:absolute; top:7px; right:9px; background:none; border:none; color:var(--muted); cursor:pointer; font-size:.95rem; }
 
-  .rpanel-scroll { flex: 1; overflow-y: auto; padding: 12px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+    /* ── Sep ── */
+    .sep { border:none; border-top:1px solid var(--border); margin:12px 0; }
 
-  /* Object list */
-  .obj-list-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid transparent;
-    cursor: pointer;
-    transition: all 0.15s;
-    margin-bottom: 3px;
-  }
-  .obj-list-item:hover { background: var(--panel2); border-color: var(--border); }
-  .obj-list-item.selected { background: rgba(79,124,255,0.12); border-color: var(--accent); }
-  .obj-list-item .oli-icon { font-size: 16px; }
-  .obj-list-item .oli-name { font-size: 12px; flex: 1; }
-  .obj-list-item .oli-del {
-    opacity: 0;
-    font-size: 14px;
-    color: #e84545;
-    cursor: pointer;
-    padding: 2px 4px;
-  }
-  .obj-list-item:hover .oli-del { opacity: 1; }
-
-  /* AI panel */
-  #ai-panel {
-    border-top: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    max-height: 300px;
-  }
-
-  .ai-header {
-    padding: 10px 14px;
-    display: flex; align-items: center; gap: 8px;
-    font-size: 13px; font-weight: 600;
-    border-bottom: 1px solid var(--border);
-    background: rgba(79,124,255,0.06);
-  }
-  .ai-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-  #ai-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px 12px;
-    font-size: 12px;
-    line-height: 1.5;
-    color: var(--text2);
-    scrollbar-width: thin;
-  }
-
-  .ai-msg { margin-bottom: 8px; }
-  .ai-msg.user { color: var(--accent); }
-  .ai-msg.ai { color: var(--text2); }
-  .ai-msg strong { color: var(--text); }
-
-  .ai-input-row {
-    display: flex;
-    gap: 6px;
-    padding: 8px 10px;
-    border-top: 1px solid var(--border);
-  }
-
-  #ai-input {
-    flex: 1;
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 7px 10px;
-    color: var(--text);
-    font-size: 12px;
-    font-family: 'DM Sans', sans-serif;
-    outline: none;
-    transition: border 0.15s;
-  }
-  #ai-input:focus { border-color: var(--accent); }
-
-  #ai-send {
-    background: var(--accent);
-    border: none;
-    border-radius: 8px;
-    padding: 7px 12px;
-    color: white;
-    font-size: 13px;
-    cursor: pointer;
-  }
-
-  /* Loading overlay */
-  #loading {
-    position: absolute;
-    inset: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    z-index: 999;
-  }
-  .loader-ring {
-    width: 60px; height: 60px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Selected object props */
-  .prop-group { margin-bottom: 14px; }
-  .prop-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; font-weight: 600; }
-  .prop-row { display: flex; gap: 6px; margin-bottom: 5px; }
-  .prop-input {
-    flex: 1; background: var(--panel2); border: 1px solid var(--border);
-    border-radius: 6px; padding: 6px 8px; color: var(--text);
-    font-size: 12px; font-family: 'DM Sans', sans-serif; outline: none;
-  }
-  .prop-input:focus { border-color: var(--accent); }
-
-  .color-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
-  .color-swatch {
-    width: 22px; height: 22px; border-radius: 5px; cursor: pointer;
-    border: 2px solid transparent; transition: all 0.1s;
-  }
-  .color-swatch:hover, .color-swatch.active { border-color: white; transform: scale(1.2); }
-
-  /* Quick tip */
-  .tip-box {
-    background: rgba(79,124,255,0.08);
-    border: 1px solid rgba(79,124,255,0.25);
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 11px;
-    color: var(--text2);
-    line-height: 1.5;
-    margin-bottom: 10px;
-  }
-  .tip-box strong { color: var(--accent); }
-
-  /* Tooltips */
-  #tooltip {
-    position: absolute;
-    background: rgba(26,29,39,0.95);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-size: 12px;
-    pointer-events: none;
-    display: none;
-    max-width: 200px;
-    line-height: 1.5;
-    z-index: 200;
-  }
-
-  /* Stats bar */
-  #statsbar {
-    position: absolute;
-    bottom: 14px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(26,29,39,0.9);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 6px 16px;
-    font-size: 11px;
-    color: var(--text2);
-    display: flex;
-    gap: 16px;
-    backdrop-filter: blur(10px);
-  }
-  #statsbar span { color: var(--text); font-weight: 600; }
-
-  /* View presets */
-  .view-btns {
-    display: flex;
-    gap: 4px;
-    padding: 8px 8px 4px;
-  }
-  .view-btn {
-    flex: 1;
-    padding: 6px;
-    border-radius: 7px;
-    border: 1px solid var(--border);
-    background: var(--panel2);
-    color: var(--text2);
-    font-size: 10px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .view-btn:hover, .view-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(79,124,255,0.1); }
-
-  /* floor style selector */
-  .floor-btns { display: flex; gap: 4px; padding: 4px 8px 8px; }
-  .floor-btn {
-    flex: 1; padding: 5px 4px; border-radius: 6px;
-    border: 1px solid var(--border); background: var(--panel2);
-    color: var(--text2); font-size: 9px; text-align: center;
-    cursor: pointer; transition: all 0.15s;
-  }
-  .floor-btn:hover, .floor-btn.active { border-color: var(--gold); color: var(--gold); }
-
-  /* Ambient controls */
-  .ambient-row {
-    padding: 4px 10px 8px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
-    color: var(--text2);
-  }
-  input[type=range] { flex: 1; accent-color: var(--accent); }
-</style>
+    /* ── Toast ── */
+    #toast { position:fixed; bottom:18px; right:18px; z-index:9999; background:var(--surface2); border:1px solid var(--accent); border-radius:8px; padding:8px 14px; color:var(--text); font-size:0.8rem; font-weight:600; transform:translateY(70px); opacity:0; transition:all .3s; pointer-events:none; }
+    #toast.show { transform:translateY(0); opacity:1; }
+  </style>
 </head>
 <body>
 
-<!-- TOP BAR -->
-<div id="topbar">
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAuth()">✕</button>
+    <h2>🔐 Account</h2>
+
+    <!-- Google Sign-In button (shown only if configured) -->
+    <div id="googleLoginWrap">
+      <button class="google-btn" onclick="googleLogin()">
+        <svg class="google-icon" viewBox="0 0 48 48">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        Continue with Google
+      </button>
+      <div class="divider">
+        <div class="divider-line"></div>
+        <span class="divider-text">or use username</span>
+        <div class="divider-line"></div>
+      </div>
+    </div>
+
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tabLogin"    onclick="switchAuthTab('login')">Login</button>
+      <button class="modal-tab"        id="tabRegister" onclick="switchAuthTab('register')">Sign Up</button>
+    </div>
+    <div class="modal-error"   id="authError"></div>
+    <div class="modal-success" id="authSuccess"></div>
+    <div class="form-group"><label>Username</label><input type="text" id="authUsername" placeholder="Enter username" maxlength="30" /></div>
+    <div class="form-group"><label>Password</label><input type="password" id="authPassword" placeholder="Enter password" onkeydown="if(event.key==='Enter')submitAuth()" /></div>
+    <button class="modal-btn" onclick="submitAuth()" id="authSubmitBtn">Login</button>
+  </div>
+</div>
+
+<!-- SHARE POPUP -->
+<div class="share-popup" id="sharePopup">
+  <button class="share-popup-close" onclick="closeSharePopup()">✕</button>
+  <h4>🔗 Share Image</h4>
+  <div class="share-link-box">
+    <input type="text" id="shareLinkInput" readonly />
+    <button onclick="copyShareLink()">Copy</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
   <div class="logo">
-    <div class="logo-icon">🏠</div>
-    Smart Home Designer
-    <span class="badge">3D</span>
+    <div class="logo-icon">🎨</div>
+    <h1>AI <span>Image</span> Generator</h1>
   </div>
-  <div class="sep"></div>
+  <div class="header-right">
+    <div class="lang-switcher">
+      <button class="lang-btn active" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
+      <button class="lang-btn"        data-lang="ru" onclick="setLang('ru')">🇷🇺 RU</button>
+      <button class="lang-btn"        data-lang="uz" onclick="setLang('uz')">🇺🇿 UZ</button>
+    </div>
+    <div class="user-area" id="userArea">
+      <button class="header-btn login-btn" onclick="openAuth()">🔐 <span data-i18n="loginBtn">Login</span></button>
+    </div>
+  </div>
+</header>
 
-  <!-- Room presets -->
-  <button class="preset-btn" onclick="loadPreset('bedroom')">🛏 Bedroom</button>
-  <button class="preset-btn" onclick="loadPreset('living')">🛋 Living</button>
-  <button class="preset-btn" onclick="loadPreset('kitchen')">🍳 Kitchen</button>
-  <button class="preset-btn" onclick="loadPreset('office')">💼 Office</button>
-  <button class="preset-btn" onclick="loadPreset('bathroom')">🚿 Bathroom</button>
-  <button class="preset-btn" onclick="loadPreset('studio')">🏢 Studio</button>
+<!-- USAGE BAR -->
+<div class="usage-bar-wrap" id="usageBarWrap">
+  <span class="usage-label" id="usagePlan">Free Plan</span>
+  <div class="usage-bar-bg"><div class="usage-bar-fill" id="usageBarFill" style="width:0%"></div></div>
+  <span class="usage-count" id="usageCount">0/10</span>
+</div>
 
-  <div class="sep"></div>
-  <button class="preset-btn" onclick="clearScene()">🗑 Clear</button>
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('generate',this)">✨ <span data-i18n="tabGenerate">Generate</span></button>
+  <button class="tab-btn" onclick="switchTab('history',this)">🕐 <span data-i18n="tabHistory">History</span> <span class="tab-badge" id="historyBadge">0</span></button>
+  <button class="tab-btn" onclick="switchTab('favorites',this)">❤️ <span data-i18n="tabFavorites">Favorites</span> <span class="tab-badge" id="favBadge">0</span></button>
+  <button class="tab-btn" onclick="switchTab('downloads',this)">⬇️ <span data-i18n="tabDownloads">Downloads</span></button>
+  <button class="tab-btn" onclick="switchTab('profile',this)">👤 <span data-i18n="tabProfile">Profile</span></button>
+</div>
 
-  <div class="top-right">
-    <button class="action-btn" onclick="screenshotScene()">📸 Screenshot</button>
-    <div class="icon-btn" title="Help" onclick="showHelp()">❓</div>
+<!-- TAB: GENERATE -->
+<div class="tab-content active" id="tab-generate">
+  <main>
+    <!-- LEFT -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">✍️ <span data-i18n="describeTitle">Describe Your Image</span></div>
+        <div class="panel-body">
+          <div class="lang-hint">🌐 <span data-i18n="langHint">Write in <strong>English</strong>, <strong>Russian</strong>, or <strong>Uzbek</strong></span></div>
+          <div class="form-group">
+            <label data-i18n="promptLabel">Your Description</label>
+            <div class="prompt-row">
+              <textarea id="prompt" maxlength="500" placeholder="A golden sunset over the mountains..." data-i18n-placeholder="promptPlaceholder"></textarea>
+              <div class="autocomplete-box" id="autocompleteBox"></div>
+            </div>
+            <div class="char-count"><span id="charCount">0</span>/500</div>
+            <div class="prompt-actions">
+              <button class="prompt-action-btn" onclick="getRandomPrompt()">🎲 <span data-i18n="randomBtn">Random</span></button>
+              <button class="prompt-action-btn" onclick="copyPrompt()">📋 <span data-i18n="copyPromptBtn">Copy</span></button>
+              <button class="prompt-action-btn" onclick="clearPrompt()">🗑️ <span data-i18n="clearBtn">Clear</span></button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label data-i18n="negativeLabel">Exclude (optional)</label>
+            <input type="text" id="negative" placeholder="blurry, low quality..." data-i18n-placeholder="negativePlaceholder" />
+          </div>
+          <hr class="sep" />
+          <div class="form-group">
+            <label data-i18n="styleLabel">Art Style</label>
+            <div class="style-grid">
+              {% for key, style in styles.items() %}
+              <div class="style-card {% if key == 'realistic' %}active{% endif %}" data-style="{{ key }}" onclick="selectStyle(this)">
+                <span>{{ style.emoji }}</span><span>{{ style.label }}</span>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="form-group">
+            <label data-i18n="sizeLabel">Image Size</label>
+            <div class="size-grid">
+              {% for key, size in sizes.items() %}
+              <div class="size-card {% if key == 'square' %}active{% endif %}" data-size="{{ key }}" onclick="selectSize(this)">{{ size.label }}</div>
+              {% endfor %}
+            </div>
+          </div>
+          <button id="generateBtn" onclick="generate()">✨ <span data-i18n="generateBtn">Generate Image</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">🖼️ <span data-i18n="resultTitle">Generated Image</span></div>
+        <div class="panel-body">
+          <div id="translationBadge">
+            <div class="badge-header">🌐 <span id="badgeLangLabel"></span></div>
+            <div class="badge-body"><div id="badgePrompt" class="en-prompt"></div></div>
+          </div>
+          <div class="spinner" id="spinner">
+            <div class="spinner-ring"></div>
+            <div class="spinner-steps">
+              <div class="step" id="step1" data-i18n="step1">🌐 Understanding your description…</div>
+              <div class="step" id="step2" data-i18n="step2">🎨 Preparing image prompt…</div>
+              <div class="step" id="step3" data-i18n="step3">⚡ Generating image…</div>
+            </div>
+          </div>
+          <div class="error-box" id="errorBox"></div>
+          <div class="result-placeholder" id="placeholder">
+            <div class="big-icon">🖼️</div>
+            <div>
+              <p style="font-size:.93rem;color:var(--text);font-weight:600;" data-i18n="placeholderTitle">Your image will appear here</p>
+              <p style="font-size:.78rem;margin-top:4px;" data-i18n="placeholderSub">Describe what you want and click Generate</p>
+            </div>
+          </div>
+          <img id="resultImage" alt="Generated" />
+          <div class="image-actions" id="imageActions" style="display:none;">
+            <button class="action-btn" id="favBtn" onclick="toggleFavorite()">🤍 <span data-i18n="favBtn">Favorite</span></button>
+            <button class="action-btn" onclick="copyResultPrompt()">📋 <span data-i18n="copyBtn">Copy</span></button>
+            <button class="action-btn" onclick="downloadImage()">⬇️ <span data-i18n="downloadBtn">Download</span></button>
+            <button class="action-btn" onclick="shareImage()">🔗 <span data-i18n="shareBtn">Share</span></button>
+          </div>
+          <div class="image-actions" id="featureActions" style="display:none;">
+            <button class="action-btn" id="btnVariations" onclick="toggleFeature('variations')">🔁 <span data-i18n="varBtn">Variations</span></button>
+            <button class="action-btn" id="btnCompare"    onclick="toggleFeature('compare')">⚖️ <span data-i18n="cmpBtn">Compare</span></button>
+            <button class="action-btn" id="btnUpscale"    onclick="toggleFeature('upscale')">🔍 <span data-i18n="upscaleBtn">Upscale</span></button>
+            <button class="action-btn" id="btnWatermark"  onclick="toggleFeature('watermark')">💧 <span data-i18n="wmBtn">Watermark</span></button>
+          </div>
+          <div class="image-meta" id="imageMeta" style="display:none;">
+            <div class="meta-chip"><div class="meta-label">Style</div><div class="meta-value" id="metaStyle">—</div></div>
+            <div class="meta-chip"><div class="meta-label">Size</div><div class="meta-value" id="metaSize">—</div></div>
+            <div class="meta-chip"><div class="meta-label">Language</div><div class="meta-value" id="metaLang">—</div></div>
+          </div>
+
+          <!-- VARIATIONS -->
+          <div class="feature-panel" id="panel-variations">
+            <h3>🔁 Image Variations</h3>
+            <div class="feature-row">
+              <div class="form-group"><label>Count</label>
+                <select id="varCount"><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+              </div>
+              <button class="feature-btn" id="varBtn2" onclick="generateVariations()">🔁 Generate</button>
+            </div>
+            <div id="variationsResult"></div>
+          </div>
+          <!-- COMPARE -->
+          <div class="feature-panel" id="panel-compare">
+            <h3>⚖️ Compare Styles</h3>
+            <div class="feature-row">
+              <div class="form-group"><label>Style A</label>
+                <select id="styleA">{% for key, style in styles.items() %}<option value="{{ key }}" {% if key=='realistic' %}selected{% endif %}>{{ style.emoji }} {{ style.label }}</option>{% endfor %}</select>
+              </div>
+              <div class="form-group"><label>Style B</label>
+                <select id="styleB">{% for key, style in styles.items() %}<option value="{{ key }}" {% if key=='anime' %}selected{% endif %}>{{ style.emoji }} {{ style.label }}</option>{% endfor %}</select>
+              </div>
+              <button class="feature-btn" id="cmpBtn2" onclick="generateCompare()">⚖️ Compare</button>
+            </div>
+            <div id="compareResult"></div>
+          </div>
+          <!-- UPSCALE -->
+          <div class="feature-panel" id="panel-upscale">
+            <h3>🔍 Upscaler</h3>
+            <div class="feature-row">
+              <div class="form-group"><label>Scale</label>
+                <select id="scaleSelect"><option value="2">2x</option><option value="4">4x</option></select>
+              </div>
+              <button class="feature-btn" id="upscaleBtn2" onclick="upscaleImage()">🔍 Upscale</button>
+            </div>
+            <div id="upscaleResult"></div>
+          </div>
+          <!-- WATERMARK -->
+          <div class="feature-panel" id="panel-watermark">
+            <h3>💧 Watermark</h3>
+            <div class="form-group"><label>Text</label><input type="text" id="wmText" placeholder="AI Generated" maxlength="50" /></div>
+            <div class="wm-options">
+              <div class="form-group"><label>Position</label>
+                <select id="wmPosition">
+                  <option value="bottom-right">↘ Bottom Right</option>
+                  <option value="bottom-left">↙ Bottom Left</option>
+                  <option value="top-right">↗ Top Right</option>
+                  <option value="top-left">↖ Top Left</option>
+                  <option value="center">⊕ Center</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Size</label>
+                <select id="wmSize"><option value="small">Small</option><option value="medium" selected>Medium</option><option value="large">Large</option></select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Opacity: <span id="opacityVal">60%</span></label>
+              <div style="display:flex;gap:7px;align-items:center">
+                <span style="font-size:.69rem;color:var(--muted)">0%</span>
+                <input type="range" id="wmOpacity" min="10" max="100" value="60" oninput="document.getElementById('opacityVal').textContent=this.value+'%'" style="flex:1" />
+                <span style="font-size:.69rem;color:var(--muted)">100%</span>
+              </div>
+            </div>
+            <button class="feature-btn" style="width:100%;" id="wmBtn2" onclick="addWatermark()">💧 Add Watermark</button>
+            <div id="watermarkResult"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- TAB: HISTORY -->
+<div class="tab-content" id="tab-history">
+  <div class="gallery-page">
+    <h2 data-i18n="historyTitle">🕐 My Generated Images</h2>
+    <div class="gallery-grid" id="historyGrid">
+      <div class="empty-gallery"><div class="ei">🕐</div><span data-i18n="historyEmpty">No images yet. Generate your first!</span></div>
+    </div>
   </div>
 </div>
 
-<!-- MAIN -->
-<div id="main">
-
-  <!-- LEFT SIDEBAR -->
-  <div id="sidebar">
-    <div class="sidebar-scroll">
-
-      <div class="sidebar-section">Views</div>
-      <div class="view-btns">
-        <div class="view-btn active" onclick="setView('perspective')" id="vb-perspective">3D</div>
-        <div class="view-btn" onclick="setView('top')" id="vb-top">Top</div>
-        <div class="view-btn" onclick="setView('front')" id="vb-front">Front</div>
-        <div class="view-btn" onclick="setView('side')" id="vb-side">Side</div>
-      </div>
-
-      <div class="sidebar-section">Floor Style</div>
-      <div class="floor-btns">
-        <div class="floor-btn active" onclick="setFloor('wood')" id="fb-wood">🪵 Wood</div>
-        <div class="floor-btn" onclick="setFloor('tile')" id="fb-tile">⬜ Tile</div>
-        <div class="floor-btn" onclick="setFloor('marble')" id="fb-marble">💎 Marble</div>
-        <div class="floor-btn" onclick="setFloor('concrete')" id="fb-concrete">🏗 Concrete</div>
-      </div>
-
-      <div class="sidebar-section">Lighting</div>
-      <div class="ambient-row">
-        ☀️
-        <input type="range" min="0.1" max="2" step="0.05" value="0.6" id="ambient-slider" oninput="setAmbient(this.value)">
-        💡
-      </div>
-      <div class="ambient-row" style="padding-top:0">
-        🌙
-        <input type="range" min="0" max="1" step="0.05" value="0.3" id="shadow-slider" oninput="setShadow(this.value)">
-        🔆
-      </div>
-
-      <div class="sidebar-section">Structure</div>
-      <div class="obj-grid">
-        <div class="obj-item" onclick="addObject('wall-h')" title="Horizontal Wall">
-          <span class="obj-icon">🧱</span>
-          <div class="obj-name">Wall H</div>
-        </div>
-        <div class="obj-item" onclick="addObject('wall-v')" title="Vertical Wall">
-          <span class="obj-icon">🧱</span>
-          <div class="obj-name">Wall V</div>
-        </div>
-        <div class="obj-item" onclick="addObject('door')" title="Door">
-          <span class="obj-icon">🚪</span>
-          <div class="obj-name">Door</div>
-        </div>
-        <div class="obj-item" onclick="addObject('window')" title="Window">
-          <span class="obj-icon">🪟</span>
-          <div class="obj-name">Window</div>
-        </div>
-        <div class="obj-item" onclick="addObject('column')" title="Column">
-          <span class="obj-icon">🏛</span>
-          <div class="obj-name">Column</div>
-        </div>
-        <div class="obj-item" onclick="addObject('stairs')" title="Stairs">
-          <span class="obj-icon">🪜</span>
-          <div class="obj-name">Stairs</div>
-        </div>
-      </div>
-
-      <div class="sidebar-section">Furniture</div>
-      <div class="obj-grid">
-        <div class="obj-item" onclick="addObject('sofa')">
-          <span class="obj-icon">🛋</span>
-          <div class="obj-name">Sofa</div>
-        </div>
-        <div class="obj-item" onclick="addObject('bed')">
-          <span class="obj-icon">🛏</span>
-          <div class="obj-name">Bed</div>
-        </div>
-        <div class="obj-item" onclick="addObject('table')">
-          <span class="obj-icon">🪑</span>
-          <div class="obj-name">Table</div>
-        </div>
-        <div class="obj-item" onclick="addObject('chair')">
-          <span class="obj-icon">🪑</span>
-          <div class="obj-name">Chair</div>
-        </div>
-        <div class="obj-item" onclick="addObject('desk')">
-          <span class="obj-icon">🖥</span>
-          <div class="obj-name">Desk</div>
-        </div>
-        <div class="obj-item" onclick="addObject('wardrobe')">
-          <span class="obj-icon">🗄</span>
-          <div class="obj-name">Wardrobe</div>
-        </div>
-        <div class="obj-item" onclick="addObject('bookshelf')">
-          <span class="obj-icon">📚</span>
-          <div class="obj-name">Bookshelf</div>
-        </div>
-        <div class="obj-item" onclick="addObject('tv')">
-          <span class="obj-icon">📺</span>
-          <div class="obj-name">TV 65"</div>
-        </div>
-        <div class="obj-item" onclick="addObject('bathtub')">
-          <span class="obj-icon">🛁</span>
-          <div class="obj-name">Bathtub</div>
-        </div>
-        <div class="obj-item" onclick="addObject('toilet')">
-          <span class="obj-icon">🚽</span>
-          <div class="obj-name">Toilet</div>
-        </div>
-        <div class="obj-item" onclick="addObject('sink')">
-          <span class="obj-icon">🚰</span>
-          <div class="obj-name">Sink</div>
-        </div>
-        <div class="obj-item" onclick="addObject('kitchen-counter')">
-          <span class="obj-icon">🍳</span>
-          <div class="obj-name">Counter</div>
-        </div>
-        <div class="obj-item" onclick="addObject('rug')">
-          <span class="obj-icon">🟥</span>
-          <div class="obj-name">Rug</div>
-        </div>
-        <div class="obj-item" onclick="addObject('plant')">
-          <span class="obj-icon">🌿</span>
-          <div class="obj-name">Plant</div>
-        </div>
-        <div class="obj-item" onclick="addObject('fireplace')">
-          <span class="obj-icon">🔥</span>
-          <div class="obj-name">Fireplace</div>
-        </div>
-        <div class="obj-item" onclick="addObject('piano')">
-          <span class="obj-icon">🎹</span>
-          <div class="obj-name">Piano</div>
-        </div>
-      </div>
-
-      <div class="sidebar-section">Electrical</div>
-      <div class="obj-grid">
-        <div class="obj-item" onclick="addObject('outlet')">
-          <span class="obj-icon">🔌</span>
-          <div class="obj-name">Outlet</div>
-        </div>
-        <div class="obj-item" onclick="addObject('switch')">
-          <span class="obj-icon">💡</span>
-          <div class="obj-name">Switch</div>
-        </div>
-        <div class="obj-item" onclick="addObject('ceiling-light')">
-          <span class="obj-icon">💡</span>
-          <div class="obj-name">Ceiling Lt</div>
-        </div>
-        <div class="obj-item" onclick="addObject('ac')">
-          <span class="obj-icon">❄</span>
-          <div class="obj-name">AC Unit</div>
-        </div>
-        <div class="obj-item" onclick="addObject('radiator')">
-          <span class="obj-icon">🌡</span>
-          <div class="obj-name">Radiator</div>
-        </div>
-        <div class="obj-item" onclick="addObject('wifi')">
-          <span class="obj-icon">📶</span>
-          <div class="obj-name">WiFi</div>
-        </div>
-      </div>
+<!-- TAB: FAVORITES -->
+<div class="tab-content" id="tab-favorites">
+  <div class="gallery-page">
+    <h2 data-i18n="favoritesTitle">❤️ Favorite Images</h2>
+    <div class="gallery-grid" id="favoritesGrid">
+      <div class="empty-gallery"><div class="ei">🤍</div><span data-i18n="favoritesEmpty">No favorites yet.</span></div>
     </div>
   </div>
-
-  <!-- 3D CANVAS -->
-  <div id="canvas-wrap">
-    <canvas id="three-canvas"></canvas>
-
-    <!-- HUD top-left -->
-    <div id="hud-tl">
-      <div class="hud-chip">Objects: <span id="stat-obj">0</span> &nbsp;|&nbsp; Walls: <span id="stat-walls">0</span> &nbsp;|&nbsp; Lights: <span id="stat-lights">0</span></div>
-    </div>
-
-    <!-- Bottom-right camera controls -->
-    <div id="hud-br">
-      <div class="cam-controls">
-        <button class="cam-btn" title="Reset view" onclick="resetCamera()">⌂</button>
-        <button class="cam-btn" title="Zoom in" onclick="zoomIn()">+</button>
-        <button class="cam-btn" title="Zoom out" onclick="zoomOut()">−</button>
-        <button class="cam-btn" title="Toggle shadows" onclick="toggleShadows()">🌑</button>
-      </div>
-    </div>
-
-    <!-- Stats bar -->
-    <div id="statsbar">
-      🖱 Drag to rotate &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp; Right-drag to pan &nbsp;·&nbsp; Click object to select
-    </div>
-
-    <!-- Loading -->
-    <div id="loading">
-      <div class="loader-ring"></div>
-      <div style="font-size:14px;color:var(--text2)">Building 3D scene…</div>
-    </div>
-
-    <!-- Tooltip -->
-    <div id="tooltip"></div>
-  </div>
-
-  <!-- RIGHT PANEL -->
-  <div id="right-panel">
-    <div class="rpanel-header">
-      🏗 Scene Objects
-    </div>
-
-    <div class="rpanel-scroll" id="obj-list-container">
-      <div class="tip-box">
-        <strong>Tip:</strong> Click any object in the 3D view to select it. Drag to move. Delete key to remove.
-      </div>
-      <div id="obj-list"></div>
-    </div>
-
-    <!-- Properties -->
-    <div id="props-panel" style="padding:10px 12px;border-top:1px solid var(--border);display:none;">
-      <div class="prop-label">Selected Object</div>
-      <div id="sel-name" style="font-weight:600;font-size:13px;margin-bottom:8px;"></div>
-      <div class="prop-group">
-        <div class="prop-label">Position</div>
-        <div class="prop-row">
-          <input class="prop-input" id="px" placeholder="X" type="number" step="0.1" oninput="updatePos()">
-          <input class="prop-input" id="py" placeholder="Y" type="number" step="0.1" oninput="updatePos()">
-          <input class="prop-input" id="pz" placeholder="Z" type="number" step="0.1" oninput="updatePos()">
-        </div>
-      </div>
-      <div class="prop-group">
-        <div class="prop-label">Color</div>
-        <div class="color-row" id="color-swatches"></div>
-      </div>
-      <button class="action-btn danger" style="width:100%;margin-top:4px;justify-content:center;" onclick="deleteSelected()">🗑 Delete Object</button>
-    </div>
-
-    <!-- AI Panel -->
-    <div id="ai-panel">
-      <div class="ai-header">
-        <div class="ai-dot"></div>
-        AI Home Advisor
-        <span style="font-size:10px;color:var(--accent);margin-left:auto;">Claude AI</span>
-      </div>
-      <div id="ai-messages">
-        <div class="ai-msg ai">👋 Hello! I'm your 3D home design advisor. Add objects, then ask me about optimal placement, Uzbekistan electrical standards, or design tips!</div>
-      </div>
-      <div class="ai-input-row">
-        <input id="ai-input" placeholder="Ask about your design…" onkeydown="if(event.key==='Enter')sendAI()">
-        <button id="ai-send" onclick="sendAI()">↑</button>
-      </div>
-    </div>
-  </div>
-
 </div>
 
-<!-- Three.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- TAB: DOWNLOADS -->
+<div class="tab-content" id="tab-downloads">
+  <div class="gallery-page">
+    <h2>⬇️ <span data-i18n="downloadsTitle">Download History</span></h2>
+    <div id="downloadsContent">
+      <div class="login-prompt"><p data-i18n="loginToSeeDownloads">Login to track your downloads</p><button onclick="openAuth()">🔐 Login</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: PROFILE -->
+<div class="tab-content" id="tab-profile">
+  <div id="profileContent">
+    <div class="login-prompt"><p data-i18n="loginToSeeProfile">Login to see your profile and API keys</p><button onclick="openAuth()">🔐 Login / Sign Up</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
 
 <script>
-// ================================================================
-// SCENE SETUP
-// ================================================================
-const canvas = document.getElementById('three-canvas');
-const wrap = document.getElementById('canvas-wrap');
+// Pass google_configured from Flask template
+const GOOGLE_CONFIGURED = {{ 'true' if google_configured else 'false' }};
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1a1e2e);
-scene.fog = new THREE.FogExp2(0x1a1e2e, 0.02);
-
-const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
-camera.position.set(12, 14, 16);
-camera.lookAt(0, 0, 0);
-
-// Resize
-function resize() {
-  const w = wrap.clientWidth, h = wrap.clientHeight;
-  renderer.setSize(w, h);
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
-}
-window.addEventListener('resize', resize);
-resize();
-
-// ================================================================
-// LIGHTING
-// ================================================================
-const ambientLight = new THREE.AmbientLight(0xffeedd, 0.6);
-scene.add(ambientLight);
-
-const sunLight = new THREE.DirectionalLight(0xfff5e0, 1.2);
-sunLight.position.set(15, 25, 10);
-sunLight.castShadow = true;
-sunLight.shadow.mapSize.width = 2048;
-sunLight.shadow.mapSize.height = 2048;
-sunLight.shadow.camera.near = 0.5;
-sunLight.shadow.camera.far = 80;
-sunLight.shadow.camera.left = -20;
-sunLight.shadow.camera.right = 20;
-sunLight.shadow.camera.top = 20;
-sunLight.shadow.camera.bottom = -20;
-sunLight.shadow.bias = -0.001;
-scene.add(sunLight);
-
-const fillLight = new THREE.DirectionalLight(0x8090ff, 0.3);
-fillLight.position.set(-8, 10, -5);
-scene.add(fillLight);
-
-const hemi = new THREE.HemisphereLight(0xffffff, 0x334455, 0.4);
-scene.add(hemi);
-
-function setAmbient(v) {
-  ambientLight.intensity = parseFloat(v);
-}
-function setShadow(v) {
-  sunLight.intensity = parseFloat(v) * 2 + 0.4;
-}
-let shadowsOn = true;
-function toggleShadows() {
-  shadowsOn = !shadowsOn;
-  renderer.shadowMap.enabled = shadowsOn;
-  scene.traverse(o => { if(o.isMesh) { o.castShadow = shadowsOn; o.receiveShadow = shadowsOn; } });
-}
-
-// ================================================================
-// TEXTURES (procedural canvas textures)
-// ================================================================
-function makeWoodTexture() {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
-  const ctx = c.getContext('2d');
-  const grad = ctx.createLinearGradient(0, 0, 256, 256);
-  grad.addColorStop(0, '#8B5E3C');
-  grad.addColorStop(0.3, '#A0714F');
-  grad.addColorStop(0.6, '#8B5E3C');
-  grad.addColorStop(1, '#7A4F2E');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 256, 256);
-  // Wood grain lines
-  ctx.strokeStyle = 'rgba(60,30,10,0.25)';
-  ctx.lineWidth = 1.5;
-  for(let i = 0; i < 30; i++) {
-    ctx.beginPath();
-    const y = (i / 30) * 256 + Math.random() * 6;
-    ctx.moveTo(0, y);
-    for(let x = 0; x < 256; x += 8) {
-      ctx.lineTo(x, y + Math.sin(x * 0.05 + i) * 3);
-    }
-    ctx.stroke();
-  }
-  return new THREE.CanvasTexture(c);
-}
-
-function makeTileTexture() {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#d8d0c0';
-  ctx.fillRect(0, 0, 256, 256);
-  ctx.strokeStyle = '#b0a890';
-  ctx.lineWidth = 4;
-  for(let x = 0; x < 256; x += 64) ctx.strokeRect(x+2, 2, 60, 252);
-  for(let y = 0; y < 256; y += 64) ctx.strokeRect(2, y+2, 252, 60);
-  return new THREE.CanvasTexture(c);
-}
-
-function makeMarbleTexture() {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#f0ece4';
-  ctx.fillRect(0, 0, 256, 256);
-  for(let i = 0; i < 20; i++) {
-    ctx.strokeStyle = `rgba(180,160,140,${Math.random()*0.4+0.1})`;
-    ctx.lineWidth = Math.random() * 3;
-    ctx.beginPath();
-    const x = Math.random() * 256;
-    ctx.moveTo(x, 0);
-    for(let y = 0; y < 256; y += 5) {
-      ctx.lineTo(x + Math.sin(y * 0.1 + i) * 30 + Math.random() * 10, y);
-    }
-    ctx.stroke();
-  }
-  return new THREE.CanvasTexture(c);
-}
-
-function makeConcreteTexture() {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#8a8880';
-  ctx.fillRect(0, 0, 256, 256);
-  for(let i = 0; i < 2000; i++) {
-    const x = Math.random()*256, y = Math.random()*256;
-    const g = Math.random()*40 - 20;
-    ctx.fillStyle = `rgba(${120+g},${118+g},${116+g},0.3)`;
-    ctx.fillRect(x, y, Math.random()*4, Math.random()*4);
-  }
-  return new THREE.CanvasTexture(c);
-}
-
-function makeBrickTexture() {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#c0503a';
-  ctx.fillRect(0, 0, 256, 256);
-  ctx.fillStyle = '#8a3a28';
-  const bw = 64, bh = 24;
-  for(let row = 0; row < Math.ceil(256/bh); row++) {
-    const offset = (row % 2) * (bw / 2);
-    for(let col = -1; col < Math.ceil(256/bw)+1; col++) {
-      ctx.fillRect(col*bw + offset + 2, row*bh + 2, bw-4, bh-4);
-    }
-  }
-  ctx.fillStyle = '#d46040';
-  for(let row = 0; row < Math.ceil(256/bh); row++) {
-    const offset = (row % 2) * (bw / 2);
-    for(let col = -1; col < Math.ceil(256/bw)+1; col++) {
-      ctx.fillRect(col*bw + offset + 3, row*bh + 3, bw-6, bh-6);
-    }
-  }
-  return new THREE.CanvasTexture(c);
-}
-
-const woodTex = makeWoodTexture();
-woodTex.wrapS = woodTex.wrapT = THREE.RepeatWrapping;
-woodTex.repeat.set(4, 4);
-
-const tileTex = makeTileTexture();
-tileTex.wrapS = tileTex.wrapT = THREE.RepeatWrapping;
-tileTex.repeat.set(6, 6);
-
-const marbleTex = makeMarbleTexture();
-marbleTex.wrapS = marbleTex.wrapT = THREE.RepeatWrapping;
-marbleTex.repeat.set(3, 3);
-
-const concreteTex = makeConcreteTexture();
-concreteTex.wrapS = concreteTex.wrapT = THREE.RepeatWrapping;
-concreteTex.repeat.set(4, 4);
-
-const brickTex = makeBrickTexture();
-brickTex.wrapS = brickTex.wrapT = THREE.RepeatWrapping;
-brickTex.repeat.set(4, 2);
-
-// Wall texture
-function makeWallPaintTexture(color) {
-  const c = document.createElement('canvas'); c.width = 128; c.height = 128;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = color || '#e8e4dc';
-  ctx.fillRect(0, 0, 128, 128);
-  for(let i = 0; i < 500; i++) {
-    const x = Math.random()*128, y = Math.random()*128;
-    ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.05})`;
-    ctx.fillRect(x, y, 2, 2);
-  }
-  return new THREE.CanvasTexture(c);
-}
-
-// ================================================================
-// FLOOR
-// ================================================================
-let currentFloorStyle = 'wood';
-let floorMesh;
-
-function createFloor(style) {
-  if(floorMesh) scene.remove(floorMesh);
-  const texMap = { wood: woodTex, tile: tileTex, marble: marbleTex, concrete: concreteTex };
-  const colorMap = { wood: 0x8B5E3C, tile: 0xd8d0c0, marble: 0xf0ece4, concrete: 0x8a8880 };
-  const geo = new THREE.PlaneGeometry(30, 30, 40, 40);
-  const mat = new THREE.MeshStandardMaterial({
-    map: texMap[style] || woodTex,
-    roughness: style === 'marble' ? 0.1 : 0.8,
-    metalness: style === 'marble' ? 0.05 : 0,
-    color: colorMap[style] || 0x8B5E3C,
-  });
-  floorMesh = new THREE.Mesh(geo, mat);
-  floorMesh.rotation.x = -Math.PI / 2;
-  floorMesh.receiveShadow = true;
-  floorMesh.userData = { noSelect: true };
-  scene.add(floorMesh);
-}
-
-createFloor('wood');
-
-function setFloor(style) {
-  currentFloorStyle = style;
-  createFloor(style);
-  document.querySelectorAll('.floor-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('fb-' + style)?.classList.add('active');
-}
-
-// Grid helper (subtle)
-const gridHelper = new THREE.GridHelper(30, 30, 0x334466, 0x222840);
-gridHelper.material.opacity = 0.25;
-gridHelper.material.transparent = true;
-scene.add(gridHelper);
-
-// ================================================================
-// OBJECT DEFINITIONS
-// ================================================================
-const OBJECT_DEFS = {
-  'wall-h': { name:'Wall H', w:4, h:2.8, d:0.2, color:0xddd8cc, isWall:true, icon:'🧱' },
-  'wall-v': { name:'Wall V', w:0.2, h:2.8, d:4, color:0xddd8cc, isWall:true, icon:'🧱' },
-  'door':   { name:'Door',   w:0.9, h:2.1, d:0.15, color:0x8B6040, isDoor:true, icon:'🚪' },
-  'window': { name:'Window', w:1.2, h:1.0, d:0.12, color:0x88ccff, opacity:0.5, icon:'🪟' },
-  'column': { name:'Column', w:0.3, h:2.8, d:0.3, color:0xcccccc, icon:'🏛' },
-  'stairs': { name:'Stairs', w:1.5, h:1.5, d:2.5, color:0xaaaaaa, isStairs:true, icon:'🪜' },
-
-  'sofa':          { name:'Sofa',       w:2.0, h:0.7, d:0.9, color:0x6670aa, isSofa:true, icon:'🛋' },
-  'bed':           { name:'Bed',        w:1.6, h:0.5, d:2.0, color:0xc0a878, isBed:true, icon:'🛏' },
-  'table':         { name:'Table',      w:1.2, h:0.75,d:0.8, color:0x8B6040, isTable:true, icon:'🪑' },
-  'chair':         { name:'Chair',      w:0.5, h:0.85,d:0.5, color:0x8B6040, isChair:true, icon:'🪑' },
-  'desk':          { name:'Desk',       w:1.4, h:0.75,d:0.7, color:0x704030, isDesk:true, icon:'🖥' },
-  'wardrobe':      { name:'Wardrobe',   w:1.2, h:2.0, d:0.6, color:0x5a4535, icon:'🗄' },
-  'bookshelf':     { name:'Bookshelf',  w:0.9, h:1.8, d:0.3, color:0x5a4535, icon:'📚' },
-  'tv':            { name:'TV 65"',     w:1.5, h:0.9, d:0.1, color:0x111111, isTV:true, icon:'📺' },
-  'bathtub':       { name:'Bathtub',    w:1.7, h:0.5, d:0.8, color:0xffffff, isBathtub:true, icon:'🛁' },
-  'toilet':        { name:'Toilet',     w:0.5, h:0.8, d:0.7, color:0xffffff, icon:'🚽' },
-  'sink':          { name:'Sink',       w:0.6, h:0.85,d:0.5, color:0xffffff, icon:'🚰' },
-  'kitchen-counter':{ name:'Counter',  w:2.0, h:0.9, d:0.6, color:0xd0c8b8, isCounter:true, icon:'🍳' },
-  'rug':           { name:'Rug',        w:2.0, h:0.02,d:1.5, color:0xaa5533, icon:'🟥' },
-  'plant':         { name:'Plant',      w:0.4, h:1.0, d:0.4, color:0x336622, isPlant:true, icon:'🌿' },
-  'fireplace':     { name:'Fireplace',  w:1.2, h:1.1, d:0.5, color:0x554444, isFireplace:true, icon:'🔥' },
-  'piano':         { name:'Piano',      w:1.5, h:1.0, d:0.7, color:0x111111, icon:'🎹' },
-
-  'outlet':        { name:'Outlet',     w:0.1, h:0.1, d:0.1, color:0xffffff, isElectrical:true, icon:'🔌' },
-  'switch':        { name:'Switch',     w:0.1, h:0.15,d:0.05,color:0xeeeeee, isElectrical:true, icon:'💡' },
-  'ceiling-light': { name:'Ceil.Light', w:0.4, h:0.15,d:0.4, color:0xffee88, isLight:true, emissive:0xffee88, emissiveIntensity:1.5, icon:'💡' },
-  'ac':            { name:'AC Unit',    w:1.0, h:0.3, d:0.2, color:0xdddddd, isElectrical:true, icon:'❄' },
-  'radiator':      { name:'Radiator',   w:1.0, h:0.5, d:0.1, color:0xdddddd, isElectrical:true, icon:'🌡' },
-  'wifi':          { name:'WiFi',       w:0.2, h:0.15,d:0.15,color:0xffffff, isElectrical:true, icon:'📶' },
+// ═══════════════════════════════════════════════
+// i18n
+// ═══════════════════════════════════════════════
+const I18N = {
+  en: {
+    loginBtn:"Login", tabGenerate:"Generate", tabHistory:"History",
+    tabFavorites:"Favorites", tabDownloads:"Downloads", tabProfile:"Profile",
+    describeTitle:"Describe Your Image",
+    langHint:"Write in <strong>English</strong>, <strong>Russian</strong>, or <strong>Uzbek</strong>",
+    promptLabel:"Your Description", promptPlaceholder:"A golden sunset over the mountains...",
+    randomBtn:"Random", copyPromptBtn:"Copy", clearBtn:"Clear",
+    negativeLabel:"Exclude (optional)", negativePlaceholder:"blurry, low quality...",
+    styleLabel:"Art Style", sizeLabel:"Image Size", generateBtn:"Generate Image",
+    resultTitle:"Generated Image",
+    step1:"🌐 Understanding your description…", step2:"🎨 Preparing image prompt…", step3:"⚡ Generating image…",
+    placeholderTitle:"Your image will appear here", placeholderSub:"Describe what you want and click Generate",
+    favBtn:"Favorite", copyBtn:"Copy Prompt", downloadBtn:"Download", shareBtn:"Share",
+    varBtn:"Variations", cmpBtn:"Compare", upscaleBtn:"Upscale", wmBtn:"Watermark",
+    historyTitle:"🕐 My Generated Images", historyEmpty:"No images yet. Generate your first!",
+    favoritesTitle:"❤️ Favorite Images", favoritesEmpty:"No favorites yet.",
+    downloadsTitle:"Download History", loginToSeeDownloads:"Login to track your downloads",
+    loginToSeeProfile:"Login to see your profile and API keys",
+  },
+  ru: {
+    loginBtn:"Войти", tabGenerate:"Создать", tabHistory:"История",
+    tabFavorites:"Избранное", tabDownloads:"Загрузки", tabProfile:"Профиль",
+    describeTitle:"Опишите изображение",
+    langHint:"Пишите на <strong>русском</strong>, <strong>узбекском</strong> или <strong>английском</strong>",
+    promptLabel:"Ваше описание", promptPlaceholder:"Золотой закат над горами...",
+    randomBtn:"Случайный", copyPromptBtn:"Копировать", clearBtn:"Очистить",
+    negativeLabel:"Исключить (необязательно)", negativePlaceholder:"размытость, плохое качество...",
+    styleLabel:"Стиль арта", sizeLabel:"Размер", generateBtn:"Создать изображение",
+    resultTitle:"Созданное изображение",
+    step1:"🌐 Анализирую описание…", step2:"🎨 Готовлю запрос…", step3:"⚡ Генерирую…",
+    placeholderTitle:"Изображение появится здесь", placeholderSub:"Опишите и нажмите «Создать»",
+    favBtn:"В избранное", copyBtn:"Копировать", downloadBtn:"Скачать", shareBtn:"Поделиться",
+    varBtn:"Вариации", cmpBtn:"Сравнить", upscaleBtn:"Увеличить", wmBtn:"Водяной знак",
+    historyTitle:"🕐 Мои изображения", historyEmpty:"Изображений нет. Создайте первое!",
+    favoritesTitle:"❤️ Избранные", favoritesEmpty:"Избранных нет.",
+    downloadsTitle:"История загрузок", loginToSeeDownloads:"Войдите для отслеживания загрузок",
+    loginToSeeProfile:"Войдите для просмотра профиля и ключей API",
+  },
+  uz: {
+    loginBtn:"Kirish", tabGenerate:"Yaratish", tabHistory:"Tarix",
+    tabFavorites:"Sevimlilar", tabDownloads:"Yuklamalar", tabProfile:"Profil",
+    describeTitle:"Tasviringizni tasvirlab bering",
+    langHint:"<strong>O'zbek</strong>, <strong>rus</strong> yoki <strong>ingliz</strong> tilida yozing",
+    promptLabel:"Sizning tavsifingiz", promptPlaceholder:"Tog'lar ustidagi oltin quyosh botishi...",
+    randomBtn:"Tasodifiy", copyPromptBtn:"Nusxalash", clearBtn:"Tozalash",
+    negativeLabel:"Istisno (ixtiyoriy)", negativePlaceholder:"loyqa, past sifat...",
+    styleLabel:"San'at uslubi", sizeLabel:"Rasm o'lchami", generateBtn:"Rasm yaratish",
+    resultTitle:"Yaratilgan rasm",
+    step1:"🌐 Tavsif tushunilmoqda…", step2:"🎨 So'rov tayyorlanmoqda…", step3:"⚡ Rasm yaratilmoqda…",
+    placeholderTitle:"Rasmingiz shu yerda paydo bo'ladi", placeholderSub:"Tasvirlab, yaratish tugmasini bosing",
+    favBtn:"Sevimli", copyBtn:"Nusxalash", downloadBtn:"Yuklab olish", shareBtn:"Ulashish",
+    varBtn:"Variantlar", cmpBtn:"Solishtirish", upscaleBtn:"Kattalashtirish", wmBtn:"Belgi",
+    historyTitle:"🕐 Mening rasmlarim", historyEmpty:"Hali rasm yo'q. Birinchisini yarating!",
+    favoritesTitle:"❤️ Sevimli rasmlar", favoritesEmpty:"Sevimlilar yo'q.",
+    downloadsTitle:"Yuklamalar tarixi", loginToSeeDownloads:"Yuklamalar uchun kiring",
+    loginToSeeProfile:"Profil va API kalitlari uchun kiring",
+  },
 };
 
-// ================================================================
-// SCENE OBJECTS
-// ================================================================
-let sceneObjects = [];
-let selectedObj = null;
-let objIdCounter = 0;
+// ═══════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════
+let currentLang   = "en";
+let selectedStyle = "realistic";
+let selectedSize  = "square";
+let currentResult = null;
+let currentUser   = null;
+let stepTimer     = null;
+let acTimer       = null;
+let activeFeature = null;
+let authMode      = "login";
 
-function createMesh(type, opts = {}) {
-  const def = OBJECT_DEFS[type];
-  if(!def) return null;
-
-  const group = new THREE.Group();
-  group.userData.type = type;
-  group.userData.id = ++objIdCounter;
-  group.userData.name = def.name;
-  group.userData.icon = def.icon;
-  group.userData.def = def;
-
-  // Main body
-  if(def.isStairs) {
-    // Build stair steps
-    const steps = 8;
-    for(let i = 0; i < steps; i++) {
-      const sw = def.w, sh = def.h / steps, sd = def.d / steps;
-      const geo = new THREE.BoxGeometry(sw, sh, sd);
-      const mat = new THREE.MeshStandardMaterial({ color: opts.color || def.color, roughness:0.9 });
-      const m = new THREE.Mesh(geo, mat);
-      m.position.set(0, (i + 0.5) * sh - def.h/2, -(i + 0.5) * sd + def.d/2);
-      m.castShadow = true; m.receiveShadow = true;
-      group.add(m);
-    }
-  } else if(def.isSofa) {
-    // Sofa: base + back + arms
-    const mat = new THREE.MeshStandardMaterial({ color: opts.color || def.color, roughness: 0.85 });
-    const base = new THREE.Mesh(new THREE.BoxGeometry(def.w, 0.35, def.d), mat);
-    base.position.y = 0; base.castShadow = true; base.receiveShadow = true;
-    group.add(base);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(def.w, 0.5, 0.15), mat);
-    back.position.set(0, 0.42, -def.d/2 + 0.08); back.castShadow = true;
-    group.add(back);
-    // cushions
-    const cushMat = new THREE.MeshStandardMaterial({ color: darken(opts.color || def.color, 0.85), roughness:0.9 });
-    const c1 = new THREE.Mesh(new THREE.BoxGeometry(def.w/2 - 0.05, 0.12, def.d - 0.2), cushMat);
-    c1.position.set(-def.w/4, 0.24, 0.05); c1.castShadow = true; group.add(c1);
-    const c2 = c1.clone(); c2.position.x = def.w/4; group.add(c2);
-  } else if(def.isBed) {
-    const mat = new THREE.MeshStandardMaterial({ color: opts.color || def.color, roughness:0.85 });
-    // Frame
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(def.w, 0.2, def.d), mat);
-    frame.position.y = 0; frame.castShadow = true; frame.receiveShadow = true; group.add(frame);
-    // Mattress
-    const mattMat = new THREE.MeshStandardMaterial({ color: 0xf5f0e8, roughness:0.95 });
-    const matt = new THREE.Mesh(new THREE.BoxGeometry(def.w - 0.1, 0.2, def.d - 0.3), mattMat);
-    matt.position.y = 0.2; matt.castShadow = true; group.add(matt);
-    // Headboard
-    const head = new THREE.Mesh(new THREE.BoxGeometry(def.w, 0.8, 0.1), mat);
-    head.position.set(0, 0.4, -def.d/2 + 0.05); head.castShadow = true; group.add(head);
-    // Pillow
-    const pillowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness:0.95 });
-    const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.35), pillowMat);
-    pillow.position.set(-0.3, 0.42, -def.d/2 + 0.5); group.add(pillow);
-    const p2 = pillow.clone(); p2.position.x = 0.3; group.add(p2);
-  } else if(def.isTable) {
-    const mat = new THREE.MeshStandardMaterial({ color: opts.color || def.color, roughness:0.5, metalness:0.05 });
-    const top = new THREE.Mesh(new THREE.BoxGeometry(def.w, 0.06, def.d), mat);
-    top.position.y = def.h/2; top.castShadow = true; group.add(top);
-    // Legs
-    const legGeo = new THREE.CylinderGeometry(0.04, 0.04, def.h - 0.06);
-    const lx = def.w/2 - 0.08, lz = def.d/2 - 0.08;
-    [[-lx,-lz],[lx,-lz],[-lx,lz],[lx,lz]].forEach(([x,z]) => {
-      const leg = new THREE.Mesh(legGeo, mat);
-      leg.position.set(x, 0, z); leg.castShadow = true; group.add(leg);
-    });
-  } else if(def.isChair) {
-    const mat = new THREE.MeshStandardMaterial({ color: opts.color || def.color, roughness:0.6 });
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.06, 0.45), mat);
-    seat.position.y = 0.44; seat.castShadow = true; group.add(seat);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 0.06), mat);
-    back.position.set(0, 0.7, -0.2); back.castShadow = true; group.add(back);
-    const legGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.44);
-    [[-0.18,-0.18],[0.18,-0.18],[-0.18,0.18],[0.18,0.18]].forEach(([x,z]) => {
-      const l = new THREE.Mesh(legGeo, mat); l.position.set(x, 0.22, z); group.add(l);
-    });
-  } else if(def.isPlant) {
-    const potMat = new THREE.MeshStandardMaterial({ color: 0xcc6633, roughness:0.9 });
-    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.3), potMat);
-    pot.position.y = 0.15; group.add(pot);
-    const stemMat = new THREE.MeshStandardMaterial({ color: 0x226611, roughness:0.9 });
-    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.6), stemMat);
-    stem.position.y = 0.6; group.add(stem);
-    const leafMat = new THREE.MeshStandardMaterial({ color: 0x44aa22, roughness:0.8 });
-    for(let i = 0; i < 6; i++) {
-      const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), leafMat);
-      const ang = (i/6) * Math.PI * 2;
-      leaf.position.set(Math.cos(ang)*0.2, 0.85 + Math.sin(i)*0.15, Math.sin(ang)*0.2);
-      leaf.scale.set(1, 0.4, 1); group.add(leaf);
-    }
-  } else if(def.isFireplace) {
-    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x776655, roughness:0.9, map: brickTex });
-    const body = new THREE.Mesh(new THREE.BoxGeometry(def.w, def.h, def.d), stoneMat);
-    body.position.y = def.h/2; body.castShadow = true; group.add(body);
-    const fireMat = new THREE.MeshStandardMaterial({ color: 0xff4400, emissive: 0xff2200, emissiveIntensity: 2, roughness:1 });
-    const fire = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.2), fireMat);
-    fire.position.set(0, 0.2, 0.16); group.add(fire);
-  } else if(def.isLight) {
-    const mat = new THREE.MeshStandardMaterial({ color: opts.color || def.color, emissive: def.emissive || 0xffee88, emissiveIntensity: 2, roughness:0.3 });
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 0.12, 16), mat);
-    body.position.y = 0; body.castShadow = false; group.add(body);
-    const pointLight = new THREE.PointLight(0xfff5e0, 0.8, 6);
-    pointLight.castShadow = false;
-    group.add(pointLight);
-  } else if(def.isWall) {
-    const wallMat = new THREE.MeshStandardMaterial({ color: opts.color || def.color, roughness:0.95, map: makeWallPaintTexture() });
-    const geo = new THREE.BoxGeometry(def.w, def.h, def.d);
-    const mesh = new THREE.Mesh(geo, wallMat);
-    mesh.position.y = def.h/2; mesh.castShadow = true; mesh.receiveShadow = true;
-    group.add(mesh);
-  } else if(def.isTV) {
-    const frameMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness:0.3, metalness:0.6 });
-    const screenMat = new THREE.MeshStandardMaterial({ color: 0x1a2a3a, emissive: 0x0a1520, emissiveIntensity: 0.5, roughness:0.1 });
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(def.w, def.h, def.d), frameMat);
-    frame.position.y = def.h/2; frame.castShadow = true; group.add(frame);
-    const screen = new THREE.Mesh(new THREE.BoxGeometry(def.w - 0.06, def.h - 0.06, 0.01), screenMat);
-    screen.position.set(0, def.h/2, def.d/2 + 0.01); group.add(screen);
-    // Stand
-    const stand = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.05), frameMat);
-    stand.position.set(0, 0.2, 0); group.add(stand);
-  } else if(def.isBathtub) {
-    const mat = new THREE.MeshStandardMaterial({ color: 0xfefefe, roughness:0.05, metalness:0.1 });
-    const outer = new THREE.Mesh(new THREE.BoxGeometry(def.w, def.h, def.d), mat);
-    outer.position.y = def.h/2; outer.castShadow = true; group.add(outer);
-    const innerMat = new THREE.MeshStandardMaterial({ color: 0xe0f0ff, roughness:0.05, metalness:0.05 });
-    const inner = new THREE.Mesh(new THREE.BoxGeometry(def.w - 0.15, def.h - 0.1, def.d - 0.15), innerMat);
-    inner.position.y = def.h; group.add(inner);
-  } else if(def.isDesk) {
-    const mat = new THREE.MeshStandardMaterial({ color: opts.color || def.color, roughness:0.5 });
-    const top = new THREE.Mesh(new THREE.BoxGeometry(def.w, 0.05, def.d), mat);
-    top.position.y = def.h; top.castShadow = true; group.add(top);
-    const legMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness:0.3, metalness:0.5 });
-    const legGeo = new THREE.BoxGeometry(0.04, def.h, 0.04);
-    [[-def.w/2+0.06,-def.d/2+0.06],[def.w/2-0.06,-def.d/2+0.06],[-def.w/2+0.06,def.d/2-0.06],[def.w/2-0.06,def.d/2-0.06]].forEach(([x,z]) => {
-      const l = new THREE.Mesh(legGeo, legMat); l.position.set(x, def.h/2, z); group.add(l);
-    });
-    // Monitor
-    const monMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness:0.3, metalness:0.7 });
-    const mon = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.33, 0.05), monMat);
-    mon.position.set(0, def.h + 0.22, -def.d/2 + 0.12); group.add(mon);
-  } else if(def.isCounter) {
-    const mat = new THREE.MeshStandardMaterial({ color: opts.color || def.color, roughness:0.3, metalness:0.05 });
-    const body = new THREE.Mesh(new THREE.BoxGeometry(def.w, def.h, def.d), mat);
-    body.position.y = def.h/2; body.castShadow = true; group.add(body);
-    // Countertop
-    const topMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness:0.1, metalness:0.2 });
-    const top = new THREE.Mesh(new THREE.BoxGeometry(def.w + 0.05, 0.05, def.d + 0.05), topMat);
-    top.position.y = def.h + 0.025; group.add(top);
-    // Sink basin
-    const sinkMat = new THREE.MeshStandardMaterial({ color: 0x999999, roughness:0.05, metalness:0.4 });
-    const sink = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.3), sinkMat);
-    sink.position.set(def.w/2 - 0.3, def.h + 0.05, 0); group.add(sink);
-  } else {
-    // Generic box
-    const opacity = def.opacity || 1;
-    const mat = new THREE.MeshStandardMaterial({
-      color: opts.color || def.color,
-      roughness: def.isElectrical ? 0.3 : 0.8,
-      metalness: def.isElectrical ? 0.4 : 0,
-      transparent: opacity < 1,
-      opacity: opacity,
-    });
-    if(def.emissive) { mat.emissive = new THREE.Color(def.emissive); mat.emissiveIntensity = def.emissiveIntensity || 1; }
-
-    const geo = new THREE.BoxGeometry(def.w, def.h, def.d);
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.y = def.h / 2;
-    mesh.castShadow = true; mesh.receiveShadow = true;
-    group.add(mesh);
-  }
-
-  // Bounding helper for all children
-  group.traverse(c => {
-    if(c.isMesh) {
-      c.castShadow = true;
-      c.receiveShadow = true;
-      c.userData.parentGroup = group;
-    }
-  });
-
-  return group;
+// ═══════════════════════════════════════════════
+// i18n
+// ═══════════════════════════════════════════════
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
+  applyTranslations();
+}
+function applyTranslations() {
+  const t = I18N[currentLang];
+  document.querySelectorAll("[data-i18n]").forEach(el => { if (t[el.dataset.i18n] !== undefined) el.innerHTML = t[el.dataset.i18n]; });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { if (t[el.dataset.i18nPlaceholder]) el.placeholder = t[el.dataset.i18nPlaceholder]; });
 }
 
-function darken(hex, factor) {
-  const r = ((hex >> 16) & 0xff) * factor;
-  const g = ((hex >> 8) & 0xff) * factor;
-  const b = (hex & 0xff) * factor;
-  return (Math.floor(r) << 16) | (Math.floor(g) << 8) | Math.floor(b);
+// ═══════════════════════════════════════════════
+// Google Login
+// ═══════════════════════════════════════════════
+function googleLogin() {
+  window.location.href = "/auth/google";
 }
 
-// ================================================================
-// ADD OBJECT
-// ================================================================
-function addObject(type) {
-  const group = createMesh(type);
-  if(!group) return;
-  // Place near center with slight offset
-  const spread = 2;
-  group.position.set((Math.random()-0.5)*spread, 0, (Math.random()-0.5)*spread);
-  scene.add(group);
-  sceneObjects.push(group);
-  updateStats();
-  updateObjectList();
-  selectObject(group);
+// Show/hide Google button based on config
+function setupGoogleBtn() {
+  const wrap = document.getElementById("googleLoginWrap");
+  if (wrap) wrap.style.display = GOOGLE_CONFIGURED ? "block" : "none";
+}
 
-  // Auto-height for wall-mounted items
-  const def = OBJECT_DEFS[type];
-  if(def.isElectrical && !def.isLight) {
-    group.position.y = type === 'switch' ? 0.95 : 0.3;
-  }
-  if(def.isLight) {
-    group.position.y = 2.8;
+// Handle Google callback results from URL params
+function handleUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("login_success")) {
+    showToast("✅ Logged in with Google!");
+    window.history.replaceState({}, "", "/");
+    loadSession();
+  } else if (params.get("login_error")) {
+    const err = params.get("login_error");
+    showToast("❌ Google login failed: " + err);
+    window.history.replaceState({}, "", "/");
+    openAuth();
   }
 }
 
-// ================================================================
-// OBJECT PRESETS
-// ================================================================
-function loadPreset(preset) {
-  clearScene();
-  const presets = {
-    living: [
-      { type:'wall-h', x:0, z:-5, ry:0 },
-      { type:'wall-h', x:0, z:5,  ry:0 },
-      { type:'wall-v', x:-5,z:0,  ry:0 },
-      { type:'wall-v', x:5, z:0,  ry:0 },
-      { type:'sofa',   x:0, z:-3, ry:0 },
-      { type:'table',  x:0, z:-1, ry:0 },
-      { type:'tv',     x:0, z:-4.5, ry:Math.PI },
-      { type:'rug',    x:0, z:-2, ry:0 },
-      { type:'plant',  x:3, z:-4, ry:0 },
-      { type:'ceiling-light', x:0, y:2.8, z:0 },
-      { type:'outlet', x:-4.8, y:0.3, z:0 },
-      { type:'outlet', x:4.8,  y:0.3, z:0 },
-      { type:'ac',     x:0, y:2.3, z:-4.85, ry:0 },
-    ],
-    bedroom: [
-      { type:'wall-h', x:0, z:-4.5 },
-      { type:'wall-h', x:0, z:4.5 },
-      { type:'wall-v', x:-4.5, z:0 },
-      { type:'wall-v', x:4.5, z:0 },
-      { type:'bed',    x:0, z:-2.5 },
-      { type:'wardrobe', x:-3.5, z:-3 },
-      { type:'desk',   x:3, z:-3 },
-      { type:'rug',    x:0, z:0 },
-      { type:'ceiling-light', x:0, y:2.8, z:0 },
-      { type:'outlet', x:-4.3, y:0.3, z:0 },
-    ],
-    kitchen: [
-      { type:'wall-h', x:0, z:-4 },
-      { type:'wall-h', x:0, z:4 },
-      { type:'wall-v', x:-4, z:0 },
-      { type:'wall-v', x:4, z:0 },
-      { type:'kitchen-counter', x:-2, z:-3.5, ry:0 },
-      { type:'kitchen-counter', x:2, z:-3.5, ry:0 },
-      { type:'table',  x:0, z:1 },
-      { type:'chair',  x:-0.7, z:1, ry:0.3 },
-      { type:'chair',  x:0.7, z:1, ry:-0.3 },
-      { type:'ceiling-light', x:0, y:2.8, z:-1 },
-      { type:'outlet', x:-3.8, y:1.1, z:-3 },
-    ],
-    office: [
-      { type:'wall-h', x:0, z:-4 },
-      { type:'wall-h', x:0, z:4 },
-      { type:'wall-v', x:-4, z:0 },
-      { type:'wall-v', x:4, z:0 },
-      { type:'desk',   x:0, z:-2.5 },
-      { type:'chair',  x:0, z:-1.2 },
-      { type:'bookshelf', x:-3, z:-3 },
-      { type:'bookshelf', x:3, z:-3 },
-      { type:'ceiling-light', x:0, y:2.8, z:0 },
-      { type:'outlet', x:-3.8, y:0.3, z:0 },
-      { type:'wifi',   x:0, y:1.5, z:-3.9 },
-    ],
-    bathroom: [
-      { type:'wall-h', x:0, z:-3 },
-      { type:'wall-h', x:0, z:3 },
-      { type:'wall-v', x:-3, z:0 },
-      { type:'wall-v', x:3, z:0 },
-      { type:'bathtub', x:-1, z:-1.5 },
-      { type:'toilet',  x:1.5, z:-1.5 },
-      { type:'sink',    x:1.5, z:2 },
-      { type:'ceiling-light', x:0, y:2.8, z:0 },
-    ],
-    studio: [
-      { type:'wall-h', x:0, z:-6 },
-      { type:'wall-h', x:0, z:6 },
-      { type:'wall-v', x:-6, z:0 },
-      { type:'wall-v', x:6, z:0 },
-      { type:'sofa',   x:0, z:-2 },
-      { type:'bed',    x:-4, z:-4 },
-      { type:'desk',   x:4, z:-4 },
-      { type:'kitchen-counter', x:-5, z:3 },
-      { type:'table',  x:0, z:2 },
-      { type:'ceiling-light', x:0, y:2.8, z:0 },
-      { type:'ceiling-light', x:-3, y:2.8, z:-3 },
-      { type:'ceiling-light', x:3, y:2.8, z:3 },
-      { type:'plant',  x:5, z:5 },
-      { type:'plant',  x:-5, z:5 },
-    ],
-  };
-
-  const items = presets[preset];
-  if(!items) return;
-  items.forEach(item => {
-    const g = createMesh(item.type);
-    if(!g) return;
-    g.position.set(item.x || 0, item.y || 0, item.z || 0);
-    if(item.ry) g.rotation.y = item.ry;
-    scene.add(g);
-    sceneObjects.push(g);
-  });
-  updateStats();
-  updateObjectList();
-  resetCamera();
+// ═══════════════════════════════════════════════
+// Usage bar
+// ═══════════════════════════════════════════════
+function updateUsageBar(used, limit, plan) {
+  const wrap  = document.getElementById("usageBarWrap");
+  const fill  = document.getElementById("usageBarFill");
+  const count = document.getElementById("usageCount");
+  const planEl= document.getElementById("usagePlan");
+  if (!currentUser) { wrap.classList.remove("show"); return; }
+  wrap.classList.add("show");
+  const pct = Math.min(100, Math.round((used / limit) * 100));
+  fill.style.width   = pct + "%";
+  fill.className     = "usage-bar-fill" + (pct >= 80 ? " warning" : "");
+  count.textContent  = `${used}/${limit} today`;
+  planEl.textContent = plan === "pro" ? "⭐ Pro Plan" : "Free Plan";
 }
 
-// ================================================================
-// CLEAR
-// ================================================================
-function clearScene() {
-  sceneObjects.forEach(g => scene.remove(g));
-  sceneObjects = [];
-  selectedObj = null;
-  updateStats();
-  updateObjectList();
-  hideProps();
+// ═══════════════════════════════════════════════
+// Auth
+// ═══════════════════════════════════════════════
+function openAuth()  { document.getElementById("authModal").classList.add("show"); }
+function closeAuth() { document.getElementById("authModal").classList.remove("show"); clearAuthMessages(); }
+function clearAuthMessages() {
+  document.getElementById("authError").style.display   = "none";
+  document.getElementById("authSuccess").style.display = "none";
+}
+function switchAuthTab(mode) {
+  authMode = mode;
+  document.getElementById("tabLogin").classList.toggle("active",    mode === "login");
+  document.getElementById("tabRegister").classList.toggle("active", mode === "register");
+  document.getElementById("authSubmitBtn").textContent = mode === "login" ? "Login" : "Create Account";
+  clearAuthMessages();
+}
+async function submitAuth() {
+  const username = document.getElementById("authUsername").value.trim();
+  const password = document.getElementById("authPassword").value.trim();
+  clearAuthMessages();
+  if (!username || !password) { showAuthMsg("error", "Please fill in all fields"); return; }
+  try {
+    const url  = authMode === "login" ? "/auth/login" : "/auth/register";
+    const res  = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({username, password}) });
+    const data = await res.json();
+    if (!res.ok || data.error) { showAuthMsg("error", data.error || "Error"); return; }
+    currentUser = data.username;
+    updateUserUI(data);
+    showAuthMsg("success", authMode === "login" ? `Welcome back, ${data.display_name || data.username}!` : `Account created! Welcome, ${data.display_name || data.username}!`);
+    setTimeout(closeAuth, 1400);
+    loadSession();
+  } catch(e) { showAuthMsg("error", "Connection error"); }
+}
+function showAuthMsg(type, msg) {
+  const el = document.getElementById(type === "error" ? "authError" : "authSuccess");
+  el.textContent = msg; el.style.display = "block";
+}
+async function logout() {
+  await fetch("/auth/logout", {method:"POST"});
+  currentUser = null;
+  document.getElementById("userArea").innerHTML = `<button class="header-btn login-btn" onclick="openAuth()">🔐 <span data-i18n="loginBtn">Login</span></button>`;
+  document.getElementById("usageBarWrap").classList.remove("show");
+  applyTranslations();
+  showToast("👋 Logged out");
 }
 
-// ================================================================
-// ORBIT CONTROLS (manual implementation)
-// ================================================================
-let isRotating = false, isPanning = false;
-let lastMouse = { x: 0, y: 0 };
-let spherical = { theta: Math.PI / 4, phi: Math.PI / 3, radius: 22 };
-let target = new THREE.Vector3(0, 1, 0);
-
-canvas.addEventListener('mousedown', onMouseDown);
-canvas.addEventListener('mousemove', onMouseMove);
-canvas.addEventListener('mouseup', () => { isRotating = false; isPanning = false; });
-canvas.addEventListener('wheel', onWheel, { passive: false });
-canvas.addEventListener('contextmenu', e => e.preventDefault());
-
-function onMouseDown(e) {
-  if(e.button === 2) { isPanning = true; }
-  else { isRotating = true; }
-  lastMouse = { x: e.clientX, y: e.clientY };
+function updateUserUI(data) {
+  const area   = document.getElementById("userArea");
+  const name   = data.display_name || data.username || currentUser;
+  const avatar = data.avatar || "";
+  const avatarHtml = avatar
+    ? `<img class="user-avatar" src="${avatar}" alt="" onerror="this.style.display='none'" />`
+    : `<div class="user-avatar-placeholder">${name.charAt(0).toUpperCase()}</div>`;
+  area.innerHTML = `<div class="user-chip">${avatarHtml} ${name}</div><button class="header-btn" onclick="logout()">Logout</button>`;
 }
 
-function onMouseMove(e) {
-  if(isRotating) {
-    const dx = (e.clientX - lastMouse.x) * 0.005;
-    const dy = (e.clientY - lastMouse.y) * 0.005;
-    spherical.theta -= dx;
-    spherical.phi = Math.max(0.1, Math.min(Math.PI/2 - 0.05, spherical.phi + dy));
-    updateCamera();
-  } else if(isPanning) {
-    const dx = (e.clientX - lastMouse.x) * 0.015;
-    const dy = (e.clientY - lastMouse.y) * 0.015;
-    const right = new THREE.Vector3();
-    const up = new THREE.Vector3(0, 1, 0);
-    right.crossVectors(camera.getWorldDirection(new THREE.Vector3()), up).normalize();
-    target.addScaledVector(right, -dx);
-    target.y += dy;
-    updateCamera();
-  }
-  lastMouse = { x: e.clientX, y: e.clientY };
-}
-
-function onWheel(e) {
-  e.preventDefault();
-  spherical.radius = Math.max(3, Math.min(50, spherical.radius + e.deltaY * 0.02));
-  updateCamera();
-}
-
-function updateCamera() {
-  const x = target.x + spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta);
-  const y = target.y + spherical.radius * Math.cos(spherical.phi);
-  const z = target.z + spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta);
-  camera.position.set(x, y, z);
-  camera.lookAt(target);
-}
-
-function resetCamera() {
-  spherical = { theta: Math.PI / 4, phi: Math.PI / 3, radius: 22 };
-  target = new THREE.Vector3(0, 1, 0);
-  updateCamera();
-}
-
-function zoomIn() { spherical.radius = Math.max(3, spherical.radius - 2); updateCamera(); }
-function zoomOut() { spherical.radius = Math.min(50, spherical.radius + 2); updateCamera(); }
-
-function setView(v) {
-  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('vb-' + v)?.classList.add('active');
-  if(v === 'top') {
-    spherical.phi = 0.05;
-    updateCamera();
-  } else if(v === 'front') {
-    spherical.theta = 0;
-    spherical.phi = Math.PI/4;
-    updateCamera();
-  } else if(v === 'side') {
-    spherical.theta = Math.PI/2;
-    spherical.phi = Math.PI/4;
-    updateCamera();
-  } else {
-    spherical = { theta: Math.PI/4, phi: Math.PI/3, radius: 22 };
-    updateCamera();
-  }
-}
-
-// ================================================================
-// SELECTION & DRAGGING
-// ================================================================
-const raycaster = new THREE.Raycaster();
-const mouse2D = new THREE.Vector2();
-let isDragging = false;
-let dragOffset = new THREE.Vector3();
-let dragPlane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
-
-canvas.addEventListener('click', onCanvasClick);
-canvas.addEventListener('mousedown', onDragStart);
-canvas.addEventListener('mousemove', onDragMove);
-canvas.addEventListener('mouseup', onDragEnd);
-
-let dragTarget = null;
-let mouseDownTime = 0;
-
-function onDragStart(e) {
-  if(e.button !== 0) return;
-  mouseDownTime = Date.now();
-  if(!selectedObj) return;
-  setMouse(e);
-  raycaster.setFromCamera(mouse2D, camera);
-  const hit = raycaster.intersectObjects(getSelectableMeshes(), true);
-  if(hit.length > 0 && hit[0].object.userData.parentGroup === selectedObj) {
-    isDragging = true;
-    dragTarget = selectedObj;
-    const pt = new THREE.Vector3();
-    raycaster.ray.intersectPlane(dragPlane, pt);
-    dragOffset.copy(dragTarget.position).sub(pt);
-    dragOffset.y = 0;
-  }
-}
-
-function onDragMove(e) {
-  if(!isDragging || !dragTarget) return;
-  setMouse(e);
-  raycaster.setFromCamera(mouse2D, camera);
-  const pt = new THREE.Vector3();
-  raycaster.ray.intersectPlane(dragPlane, pt);
-  dragTarget.position.x = pt.x + dragOffset.x;
-  dragTarget.position.z = pt.z + dragOffset.z;
-  updatePropsInputs();
-}
-
-function onDragEnd(e) {
-  isDragging = false;
-  dragTarget = null;
-}
-
-function setMouse(e) {
-  const rect = canvas.getBoundingClientRect();
-  mouse2D.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-  mouse2D.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-}
-
-function getSelectableMeshes() {
-  const meshes = [];
-  sceneObjects.forEach(g => g.traverse(c => { if(c.isMesh) meshes.push(c); }));
-  return meshes;
-}
-
-function onCanvasClick(e) {
-  if(Date.now() - mouseDownTime > 200) return; // was dragging
-  setMouse(e);
-  raycaster.setFromCamera(mouse2D, camera);
-  const hits = raycaster.intersectObjects(getSelectableMeshes(), true);
-  if(hits.length > 0) {
-    const group = hits[0].object.userData.parentGroup;
-    if(group) selectObject(group);
-  } else {
-    deselectAll();
-  }
-}
-
-function selectObject(group) {
-  deselectAll();
-  selectedObj = group;
-  // Highlight
-  group.traverse(c => {
-    if(c.isMesh && c.material) {
-      c.userData.origEmissive = c.material.emissive ? c.material.emissive.getHex() : 0;
-      c.userData.origEI = c.material.emissiveIntensity || 0;
-      if(c.material.emissive) {
-        c.material.emissive.setHex(0x4f7cff);
-        c.material.emissiveIntensity = 0.3;
+async function loadSession() {
+  try {
+    const res  = await fetch("/auth/me");
+    const data = await res.json();
+    if (data.logged_in) {
+      currentUser = data.username;
+      updateUserUI(data);
+      updateUsageBar(data.used_today, data.limit_today, data.plan);
+      // Update Google button visibility
+      if (!data.google_configured) {
+        const wrap = document.getElementById("googleLoginWrap");
+        if (wrap) wrap.style.display = "none";
       }
+      loadBadgeCounts();
     }
-  });
-  updateObjectList();
-  showProps(group);
+  } catch(e) {}
 }
 
-function deselectAll() {
-  if(selectedObj) {
-    selectedObj.traverse(c => {
-      if(c.isMesh && c.material && c.material.emissive) {
-        c.material.emissive.setHex(c.userData.origEmissive || 0);
-        c.material.emissiveIntensity = c.userData.origEI || 0;
-      }
-    });
-  }
-  selectedObj = null;
-  updateObjectList();
-  hideProps();
+// ═══════════════════════════════════════════════
+// Tabs
+// ═══════════════════════════════════════════════
+function switchTab(name, btn) {
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("tab-" + name).classList.add("active");
+  if (btn) btn.classList.add("active");
+  if (name === "history")   loadHistory();
+  if (name === "favorites") loadFavorites();
+  if (name === "downloads") loadDownloads();
+  if (name === "profile")   loadProfile();
 }
 
-// Keyboard
-window.addEventListener('keydown', e => {
-  if(e.key === 'Delete' || e.key === 'Backspace') {
-    if(selectedObj) deleteSelected();
-  }
-  if(e.key === 'Escape') deselectAll();
-  if(e.key === 'r' || e.key === 'R') {
-    if(selectedObj) selectedObj.rotation.y += Math.PI/4;
-  }
-});
-
-// ================================================================
-// PROPS PANEL
-// ================================================================
-const COLORS = [0xe74c3c, 0xe67e22, 0xf1c40f, 0x2ecc71, 0x1abc9c, 0x3498db, 0x9b59b6, 0x1a1a2e, 0xffffff, 0x8B5E3C, 0x6670aa, 0xaaaaaa];
-
-function showProps(group) {
-  document.getElementById('props-panel').style.display = 'block';
-  document.getElementById('sel-name').textContent = (group.userData.icon || '') + ' ' + group.userData.name;
-  updatePropsInputs();
-  // Color swatches
-  const sw = document.getElementById('color-swatches');
-  sw.innerHTML = '';
-  COLORS.forEach(hex => {
-    const el = document.createElement('div');
-    el.className = 'color-swatch';
-    el.style.background = '#' + hex.toString(16).padStart(6,'0');
-    el.onclick = () => applyColor(hex);
-    sw.appendChild(el);
-  });
+// ═══════════════════════════════════════════════
+// Style / Size
+// ═══════════════════════════════════════════════
+function selectStyle(el) {
+  document.querySelectorAll(".style-card").forEach(c => c.classList.remove("active"));
+  el.classList.add("active"); selectedStyle = el.dataset.style;
+}
+function selectSize(el) {
+  document.querySelectorAll(".size-card").forEach(c => c.classList.remove("active"));
+  el.classList.add("active"); selectedSize = el.dataset.size;
 }
 
-function hideProps() {
-  document.getElementById('props-panel').style.display = 'none';
+// ═══════════════════════════════════════════════
+// Prompt helpers
+// ═══════════════════════════════════════════════
+function updateCharCount() { document.getElementById("charCount").textContent = document.getElementById("prompt").value.length; }
+document.getElementById("prompt").addEventListener("input", () => { updateCharCount(); scheduleAutocomplete(); });
+async function getRandomPrompt() {
+  try {
+    const d = await (await fetch(`/random-prompt?lang=${currentLang}`)).json();
+    document.getElementById("prompt").value = d.prompt; updateCharCount(); showToast("🎲 Random prompt!");
+  } catch(e) {}
 }
-
-function updatePropsInputs() {
-  if(!selectedObj) return;
-  document.getElementById('px').value = selectedObj.position.x.toFixed(2);
-  document.getElementById('py').value = selectedObj.position.y.toFixed(2);
-  document.getElementById('pz').value = selectedObj.position.z.toFixed(2);
+function copyPrompt() {
+  const t = document.getElementById("prompt").value.trim();
+  if (t) navigator.clipboard.writeText(t).then(() => showToast("📋 Copied!"));
 }
-
-function updatePos() {
-  if(!selectedObj) return;
-  selectedObj.position.x = parseFloat(document.getElementById('px').value) || 0;
-  selectedObj.position.y = parseFloat(document.getElementById('py').value) || 0;
-  selectedObj.position.z = parseFloat(document.getElementById('pz').value) || 0;
+function copyResultPrompt() {
+  if (currentResult) navigator.clipboard.writeText(currentResult.original_prompt).then(() => showToast("📋 Prompt copied!"));
 }
+function clearPrompt() { document.getElementById("prompt").value = ""; updateCharCount(); hideAutocomplete(); }
 
-function applyColor(hex) {
-  if(!selectedObj) return;
-  selectedObj.traverse(c => {
-    if(c.isMesh && c.material && !c.material.transparent) {
-      c.material.color.setHex(hex);
-    }
-  });
+// ═══════════════════════════════════════════════
+// Autocomplete
+// ═══════════════════════════════════════════════
+function scheduleAutocomplete() { clearTimeout(acTimer); acTimer = setTimeout(fetchSuggestions, 300); }
+async function fetchSuggestions() {
+  const last = document.getElementById("prompt").value.split(/[,.]/).pop().trim();
+  if (last.length < 2) { hideAutocomplete(); return; }
+  try {
+    const d = await (await fetch(`/suggestions?q=${encodeURIComponent(last)}`)).json();
+    showAutocomplete(d.suggestions);
+  } catch(e) { hideAutocomplete(); }
 }
-
-function deleteSelected() {
-  if(!selectedObj) return;
-  scene.remove(selectedObj);
-  sceneObjects = sceneObjects.filter(o => o !== selectedObj);
-  selectedObj = null;
-  updateStats();
-  updateObjectList();
-  hideProps();
+function showAutocomplete(list) {
+  const box = document.getElementById("autocompleteBox");
+  if (!list.length) { hideAutocomplete(); return; }
+  box.innerHTML = list.map(s => `<div class="autocomplete-item" onclick="applyAutocomplete('${s.replace(/'/g,"\\'")}')"><span style="color:var(--accent2);font-size:.68rem">✦</span>${s}</div>`).join("");
+  box.style.display = "block";
 }
-
-// ================================================================
-// OBJECT LIST
-// ================================================================
-function updateObjectList() {
-  const el = document.getElementById('obj-list');
-  el.innerHTML = '';
-  sceneObjects.forEach(g => {
-    const item = document.createElement('div');
-    item.className = 'obj-list-item' + (g === selectedObj ? ' selected' : '');
-    item.innerHTML = `
-      <span class="oli-icon">${g.userData.icon || '📦'}</span>
-      <span class="oli-name">${g.userData.name}</span>
-      <span class="oli-del" onclick="deleteObj(${g.userData.id})">✕</span>
-    `;
-    item.addEventListener('click', () => selectObject(g));
-    el.appendChild(item);
-  });
+function hideAutocomplete() { document.getElementById("autocompleteBox").style.display = "none"; }
+function applyAutocomplete(s) {
+  const el = document.getElementById("prompt");
+  const parts = el.value.split(/([,.])/);
+  parts[parts.length-1] = " " + s;
+  el.value = parts.join("").replace(/^\s+/,"");
+  updateCharCount(); hideAutocomplete(); el.focus();
 }
+document.addEventListener("click", e => { if (!e.target.closest(".prompt-row")) hideAutocomplete(); });
 
-function deleteObj(id) {
-  const g = sceneObjects.find(o => o.userData.id === id);
-  if(g) {
-    if(g === selectedObj) deselectAll();
-    scene.remove(g);
-    sceneObjects = sceneObjects.filter(o => o !== g);
-    updateStats();
-    updateObjectList();
-  }
+// ═══════════════════════════════════════════════
+// Spinner
+// ═══════════════════════════════════════════════
+function animateSteps() {
+  const ids = ["step1","step2","step3"]; let i = 0;
+  ids.forEach(id => document.getElementById(id).className = "step");
+  document.getElementById(ids[0]).classList.add("active");
+  stepTimer = setInterval(() => {
+    if (i < ids.length-1) { document.getElementById(ids[i]).classList.replace("active","done"); document.getElementById(ids[++i]).classList.add("active"); }
+  }, 2500);
 }
+function stopSteps() { clearInterval(stepTimer); ["step1","step2","step3"].forEach(id => document.getElementById(id).className="step"); }
 
-// ================================================================
-// STATS
-// ================================================================
-function updateStats() {
-  document.getElementById('stat-obj').textContent = sceneObjects.length;
-  document.getElementById('stat-walls').textContent = sceneObjects.filter(o => o.userData.def?.isWall).length;
-  document.getElementById('stat-lights').textContent = sceneObjects.filter(o => o.userData.def?.isLight).length;
-}
+// ═══════════════════════════════════════════════
+// Generate
+// ═══════════════════════════════════════════════
+async function generate() {
+  const prompt   = document.getElementById("prompt").value.trim();
+  const negative = document.getElementById("negative").value.trim();
+  if (!prompt) return;
 
-// ================================================================
-// SCREENSHOT
-// ================================================================
-function screenshotScene() {
-  renderer.render(scene, camera);
-  const link = document.createElement('a');
-  link.download = 'smart-home-3d.png';
-  link.href = canvas.toDataURL('image/png');
-  link.click();
-}
+  const btn = document.getElementById("generateBtn");
+  btn.disabled = true; hideAutocomplete();
 
-// ================================================================
-// AI ADVISOR
-// ================================================================
-async function sendAI() {
-  const input = document.getElementById('ai-input');
-  const msg = input.value.trim();
-  if(!msg) return;
-  input.value = '';
-
-  addAIMsg(msg, 'user');
-
-  const context = `Current 3D scene has ${sceneObjects.length} objects: ${sceneObjects.map(o=>o.userData.name).join(', ')}. Floor style: ${currentFloorStyle}.`;
+  ["placeholder","resultImage","imageMeta","imageActions","featureActions","errorBox","translationBadge"]
+    .forEach(id => document.getElementById(id).style.display = "none");
+  document.querySelectorAll(".feature-panel").forEach(p => p.classList.remove("show"));
+  activeFeature = null;
+  document.querySelectorAll("#featureActions .action-btn").forEach(b => b.classList.remove("active-feature"));
+  document.getElementById("spinner").style.display = "flex";
+  animateSteps();
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: `You are a 3D home design expert and AI advisor for Smart Home Designer. ${context} 
-Give concise, practical advice about room layout, furniture placement, lighting, and Uzbekistan electrical standards (220V, outlets at 30-40cm height, IP44 in bathrooms, switches at 90-100cm). Keep answers under 120 words, practical and specific.`,
-        messages: [{ role: 'user', content: msg }]
-      })
+    const res  = await fetch("/generate", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({prompt, style:selectedStyle, size:selectedSize, negative})
     });
-    const data = await response.json();
-    const text = data.content?.[0]?.text || 'Sorry, I could not get a response.';
-    addAIMsg(text, 'ai');
+    const data = await res.json();
+    stopSteps(); document.getElementById("spinner").style.display = "none";
+
+    if (!res.ok || data.error) {
+      document.getElementById("errorBox").textContent = data.error || "Unknown error";
+      document.getElementById("errorBox").style.display = "block";
+      return;
+    }
+
+    currentResult = data;
+
+    if (data.was_translated) {
+      const lm = {Russian:"🇷🇺 Russian", Uzbek:"🇺🇿 Uzbek"};
+      document.getElementById("badgeLangLabel").textContent = "Detected: " + (lm[data.detected_language]||data.detected_language);
+      document.getElementById("badgePrompt").textContent = `"${data.expanded_prompt}"`;
+      document.getElementById("translationBadge").style.display = "block";
+    }
+
+    const img = document.getElementById("resultImage");
+    img.src = data.image_url; img.style.display = "block";
+    updateFavBtn(data.is_favorite || false);
+    document.getElementById("metaStyle").textContent = data.style;
+    document.getElementById("metaSize").textContent  = data.size;
+    document.getElementById("metaLang").textContent  = data.detected_language || "English";
+    document.getElementById("imageMeta").style.display    = "grid";
+    document.getElementById("imageActions").style.display = "flex";
+    document.getElementById("featureActions").style.display = "flex";
+
+    // Update usage bar
+    updateUsageBar(data.used_today, data.limit_today, currentUser ? "free" : "free");
+
+    // Refresh history badge immediately after generating
+    loadBadgeCounts();
+
   } catch(e) {
-    addAIMsg('Could not connect to AI. Check your connection.', 'ai');
+    stopSteps(); document.getElementById("spinner").style.display = "none";
+    document.getElementById("errorBox").textContent = "Connection error: " + e.message;
+    document.getElementById("errorBox").style.display = "block";
+  } finally { btn.disabled = false; }
+}
+
+// ═══════════════════════════════════════════════
+// Feature panels
+// ═══════════════════════════════════════════════
+function toggleFeature(name) {
+  const panel = document.getElementById("panel-" + name);
+  const btnId = "btn" + name.charAt(0).toUpperCase() + name.slice(1);
+  const btn   = document.getElementById(btnId);
+  if (activeFeature === name) {
+    panel.classList.remove("show"); btn.classList.remove("active-feature"); activeFeature = null;
+  } else {
+    document.querySelectorAll(".feature-panel").forEach(p => p.classList.remove("show"));
+    document.querySelectorAll("#featureActions .action-btn").forEach(b => b.classList.remove("active-feature"));
+    panel.classList.add("show"); btn.classList.add("active-feature"); activeFeature = name;
   }
 }
 
-function addAIMsg(text, role) {
-  const el = document.getElementById('ai-messages');
-  const div = document.createElement('div');
-  div.className = 'ai-msg ' + role;
-  div.innerHTML = role === 'user' ? `<strong>You:</strong> ${text}` : text;
-  el.appendChild(div);
-  el.scrollTop = el.scrollHeight;
+// ═══════════════════════════════════════════════
+// Variations
+// ═══════════════════════════════════════════════
+async function generateVariations() {
+  if (!currentResult) return;
+  const btn = document.getElementById("varBtn2"), count = parseInt(document.getElementById("varCount").value);
+  btn.disabled = true; btn.innerHTML = `<span class="mini-spinner"></span> Generating...`;
+  document.getElementById("variationsResult").innerHTML = `<p style="color:var(--muted);font-size:.79rem;margin-top:8px">Generating ${count} variations...</p>`;
+  try {
+    const res = await fetch("/variation", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({prompt:currentResult.prompt, style_key:currentResult.style_key, size_key:currentResult.size_key, count}) });
+    const d = await res.json();
+    if (d.error) { document.getElementById("variationsResult").innerHTML = `<p style="color:var(--red)">${d.error}</p>`; return; }
+    document.getElementById("variationsResult").innerHTML = `<div class="variations-grid">${
+      d.variations.map(v => v.error
+        ? `<div style="color:var(--red);font-size:.75rem;padding:8px">Error: ${v.error}</div>`
+        : `<div class="variation-card"><img src="${v.image_url}" loading="lazy"/><div class="variation-card-footer"><span>Var ${v.index}</span><button class="var-dl" onclick="window.location.href='/download/${v.filename}'">⬇ Save</button></div></div>`
+      ).join("")}</div>`;
+    showToast(`✅ ${d.count} variations done!`);
+  } catch(e) { document.getElementById("variationsResult").innerHTML = `<p style="color:var(--red)">Error: ${e.message}</p>`; }
+  finally { btn.disabled = false; btn.innerHTML = "🔁 Generate"; }
 }
 
-// ================================================================
-// RENDER LOOP
-// ================================================================
-let animId;
-function animate() {
-  animId = requestAnimationFrame(animate);
-  // Subtle floating for plants
-  const t = Date.now() * 0.001;
-  sceneObjects.forEach(g => {
-    if(g.userData.type === 'plant') {
-      g.rotation.y = Math.sin(t * 0.5 + g.userData.id) * 0.05;
+// ═══════════════════════════════════════════════
+// Compare
+// ═══════════════════════════════════════════════
+async function generateCompare() {
+  if (!currentResult) return;
+  const btn = document.getElementById("cmpBtn2");
+  btn.disabled = true; btn.innerHTML = `<span class="mini-spinner"></span> Comparing...`;
+  document.getElementById("compareResult").innerHTML = `<p style="color:var(--muted);font-size:.79rem;margin-top:8px">Generating comparison...</p>`;
+  try {
+    const res = await fetch("/compare", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({prompt:currentResult.expanded_prompt, style_a:document.getElementById("styleA").value, style_b:document.getElementById("styleB").value, size_key:currentResult.size_key}) });
+    const d = await res.json();
+    if (d.error) { document.getElementById("compareResult").innerHTML = `<p style="color:var(--red)">${d.error}</p>`; return; }
+    const ca = d.compare.a, cb = d.compare.b;
+    document.getElementById("compareResult").innerHTML = `<div class="compare-grid">
+      <div class="compare-card"><img src="${ca.image_url||''}" loading="lazy"/><div class="compare-card-label"><span>🅰 ${ca.style||''}</span><button class="var-dl" onclick="window.location.href='/download/${ca.filename||''}'">⬇</button></div></div>
+      <div class="compare-card"><img src="${cb.image_url||''}" loading="lazy"/><div class="compare-card-label"><span>🅱 ${cb.style||''}</span><button class="var-dl" onclick="window.location.href='/download/${cb.filename||''}'">⬇</button></div></div>
+    </div>`;
+    showToast("⚖️ Comparison ready!");
+  } catch(e) { document.getElementById("compareResult").innerHTML = `<p style="color:var(--red)">Error: ${e.message}</p>`; }
+  finally { btn.disabled = false; btn.innerHTML = "⚖️ Compare"; }
+}
+
+// ═══════════════════════════════════════════════
+// Upscale
+// ═══════════════════════════════════════════════
+async function upscaleImage() {
+  if (!currentResult) return;
+  const btn = document.getElementById("upscaleBtn2"), scale = parseInt(document.getElementById("scaleSelect").value);
+  btn.disabled = true; btn.innerHTML = `<span class="mini-spinner"></span> Upscaling...`;
+  document.getElementById("upscaleResult").innerHTML = `<p style="color:var(--muted);font-size:.79rem;margin-top:8px">Upscaling ${scale}x...</p>`;
+  try {
+    const res = await fetch("/upscale", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({filename:currentResult.filename, scale}) });
+    const d = await res.json();
+    if (d.error) { document.getElementById("upscaleResult").innerHTML = `<p style="color:var(--red)">${d.error}</p>`; return; }
+    document.getElementById("upscaleResult").innerHTML = `<div class="process-result">
+      <img src="${currentResult.image_url}"/>
+      <div class="process-result-info"><span>📐 ${d.original_size} → <strong style="color:var(--green)">${d.new_size}</strong></span>
+      <button class="feature-btn" style="padding:5px 11px;font-size:.75rem" onclick="window.location.href='${d.download_url}'">⬇ ${scale}x</button></div>
+    </div>`;
+    showToast(`✅ Upscaled to ${d.new_size}!`);
+  } catch(e) { document.getElementById("upscaleResult").innerHTML = `<p style="color:var(--red)">Error: ${e.message}</p>`; }
+  finally { btn.disabled = false; btn.innerHTML = "🔍 Upscale"; }
+}
+
+// ═══════════════════════════════════════════════
+// Watermark
+// ═══════════════════════════════════════════════
+async function addWatermark() {
+  if (!currentResult) return;
+  const btn = document.getElementById("wmBtn2");
+  btn.disabled = true; btn.innerHTML = `<span class="mini-spinner"></span> Adding...`;
+  document.getElementById("watermarkResult").innerHTML = `<p style="color:var(--muted);font-size:.79rem;margin-top:8px">Adding watermark...</p>`;
+  try {
+    const res = await fetch("/watermark", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        filename: currentResult.filename,
+        text:     document.getElementById("wmText").value.trim() || "AI Generated",
+        position: document.getElementById("wmPosition").value,
+        size:     document.getElementById("wmSize").value,
+        opacity:  parseInt(document.getElementById("wmOpacity").value) / 100,
+      }) });
+    const d = await res.json();
+    if (d.error) { document.getElementById("watermarkResult").innerHTML = `<p style="color:var(--red)">${d.error}</p>`; return; }
+    document.getElementById("watermarkResult").innerHTML = `<div class="process-result" style="margin-top:8px">
+      <img src="${d.download_url}?t=${Date.now()}" onerror="this.src='${currentResult.image_url}'"/>
+      <div class="process-result-info"><span>💧 "${d.text}"</span>
+      <button class="feature-btn" style="padding:5px 11px;font-size:.75rem" onclick="window.location.href='${d.download_url}'">⬇ Download</button></div>
+    </div>`;
+    showToast("💧 Watermark added!");
+  } catch(e) { document.getElementById("watermarkResult").innerHTML = `<p style="color:var(--red)">Error: ${e.message}</p>`; }
+  finally { btn.disabled = false; btn.innerHTML = "💧 Add Watermark"; }
+}
+
+// ═══════════════════════════════════════════════
+// Favorite
+// ═══════════════════════════════════════════════
+function updateFavBtn(isFav) {
+  const btn = document.getElementById("favBtn");
+  if (isFav) { btn.classList.add("fav-active"); btn.innerHTML = `❤️ <span>Unfavorite</span>`; }
+  else        { btn.classList.remove("fav-active"); btn.innerHTML = `🤍 <span data-i18n="favBtn">Favorite</span>`; }
+}
+async function toggleFavorite() {
+  if (!currentResult) return;
+  if (!currentUser) { showToast("🔐 Login to save favorites"); openAuth(); return; }
+  try {
+    const res  = await fetch("/favorites/toggle", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({filename:currentResult.filename, image_url:currentResult.image_url,
+        original_prompt:currentResult.original_prompt, style:currentResult.style, timestamp:currentResult.timestamp}) });
+    const data = await res.json();
+    updateFavBtn(data.favorited);
+    document.getElementById("favBadge").textContent = data.count;
+    showToast(data.favorited ? "❤️ Added to favorites!" : "💔 Removed from favorites");
+  } catch(e) {}
+}
+function downloadImage() { if (currentResult?.filename) window.location.href = `/download/${currentResult.filename}`; }
+
+// ═══════════════════════════════════════════════
+// Share
+// ═══════════════════════════════════════════════
+async function shareImage() {
+  if (!currentResult) return;
+  try {
+    const res  = await fetch("/share", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({filename:currentResult.filename, image_url:currentResult.image_url,
+        prompt:currentResult.original_prompt, style:currentResult.style}) });
+    const data = await res.json();
+    if (data.error) { showToast("❌ " + data.error); return; }
+    document.getElementById("shareLinkInput").value = data.share_url;
+    document.getElementById("sharePopup").classList.add("show");
+    showToast("🔗 Share link created!");
+  } catch(e) { showToast("❌ Share failed"); }
+}
+function closeSharePopup() { document.getElementById("sharePopup").classList.remove("show"); }
+function copyShareLink() {
+  navigator.clipboard.writeText(document.getElementById("shareLinkInput").value).then(() => showToast("✅ Link copied!"));
+}
+
+// ═══════════════════════════════════════════════
+// History — FIXED: loads for both guests and users
+// ═══════════════════════════════════════════════
+async function loadHistory() {
+  try {
+    const d = await (await fetch("/history")).json();
+    const items = d.history || [];
+    renderGallery("historyGrid", items, false, I18N[currentLang].historyEmpty);
+    document.getElementById("historyBadge").textContent = items.length;
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════
+// Favorites
+// ═══════════════════════════════════════════════
+async function loadFavorites() {
+  try {
+    const d = await (await fetch("/favorites")).json();
+    const items = d.favorites || [];
+    renderGallery("favoritesGrid", items, true, I18N[currentLang].favoritesEmpty);
+    document.getElementById("favBadge").textContent = items.length;
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════
+// Downloads
+// ═══════════════════════════════════════════════
+async function loadDownloads() {
+  const el = document.getElementById("downloadsContent");
+  if (!currentUser) {
+    el.innerHTML = `<div class="login-prompt"><p>${I18N[currentLang].loginToSeeDownloads}</p><button onclick="openAuth()">🔐 Login</button></div>`;
+    return;
+  }
+  try {
+    const d = await (await fetch("/user/downloads")).json();
+    if (!d.downloads?.length) {
+      el.innerHTML = `<div class="empty-gallery"><div class="ei">⬇️</div>No downloads yet.</div>`;
+      return;
     }
-    if(g.userData.type === 'ceiling-light') {
-      g.traverse(c => {
-        if(c.isPointLight) c.intensity = 0.7 + Math.sin(t * 2 + g.userData.id) * 0.05;
-      });
+    el.innerHTML = `<div style="padding:16px 20px;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="color:var(--muted);font-size:.7rem;border-bottom:1px solid var(--border)">
+          <th style="padding:6px 9px;text-align:left">File</th>
+          <th style="padding:6px 9px;text-align:left">Time</th>
+        </tr></thead>
+        <tbody>${d.downloads.map(dl => `<tr style="border-bottom:1px solid var(--border);font-size:.8rem">
+          <td style="padding:7px 9px;color:var(--text)">${dl.filename||'—'}</td>
+          <td style="padding:7px 9px;color:var(--muted)">${dl.timestamp||''}</td>
+        </tr>`).join("")}</tbody>
+      </table></div>`;
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════
+// Profile + API Keys
+// ═══════════════════════════════════════════════
+async function loadProfile() {
+  const el = document.getElementById("profileContent");
+  if (!currentUser) {
+    el.innerHTML = `<div class="login-prompt"><p>${I18N[currentLang].loginToSeeProfile}</p><button onclick="openAuth()">🔐 Login / Sign Up</button></div>`;
+    return;
+  }
+  try {
+    const res  = await fetch("/auth/me");
+    const data = await res.json();
+    if (!data.logged_in) {
+      el.innerHTML = `<div class="login-prompt"><p>Please login</p><button onclick="openAuth()">🔐 Login</button></div>`;
+      return;
     }
-  });
-  renderer.render(scene, camera);
+    const avatarHtml = data.avatar
+      ? `<img class="profile-avatar" src="${data.avatar}" alt="" onerror="this.style.display='none'" />`
+      : `<div class="profile-avatar-placeholder">${(data.display_name||data.username).charAt(0).toUpperCase()}</div>`;
+    const googleBadge = data.login_method === "google"
+      ? `<div class="google-badge"><svg width="12" height="12" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Signed in with Google</div>`
+      : "";
+    el.innerHTML = `
+      <div class="profile-box">
+        <h2>${avatarHtml} ${data.display_name || data.username}</h2>
+        ${googleBadge}
+        <span class="plan-badge plan-${data.plan}">${data.plan === 'pro' ? '⭐ PRO' : 'FREE'}</span>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-number">${data.image_count}</div><div class="stat-label">Images</div></div>
+          <div class="stat-card"><div class="stat-number">${data.favorite_count}</div><div class="stat-label">Favorites</div></div>
+          <div class="stat-card"><div class="stat-number">${data.download_count}</div><div class="stat-label">Downloads</div></div>
+        </div>
+        <p style="font-size:.75rem;color:var(--muted);margin-bottom:5px">Daily: <strong style="color:var(--text)">${data.used_today}/${data.limit_today}</strong> images used</p>
+        <p style="font-size:.75rem;color:var(--muted);margin-bottom:13px">Member since: ${data.joined}</p>
+        <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+      </div>
+      <div class="api-section" id="apiSection">
+        <h3>🔑 API Keys</h3>
+        <p>Use your API key to generate images from any app or script.</p>
+        <div id="apiKeysList"><p style="color:var(--muted);font-size:.79rem">Loading...</p></div>
+        <div style="display:flex;gap:7px;margin-top:11px;flex-wrap:wrap">
+          <input type="text" id="newKeyLabel" placeholder="Label (e.g. My App)"
+            style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:.81rem;padding:7px 10px" />
+          <button class="api-mini-btn" onclick="createApiKey()"
+            style="background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff">+ Create Key</button>
+        </div>
+        <div class="api-docs-box">
+          <span class="hl">POST</span> /api/v1/generate<br>
+          Header: <span class="hl">X-API-Key: aig_your_key</span><br>
+          Body: <span class="hl">{"prompt":"a dragon","style":"fantasy"}</span>
+        </div>
+      </div>`;
+    loadApiKeys();
+  } catch(e) {}
 }
 
-// ================================================================
-// INIT
-// ================================================================
-function init() {
-  updateCamera();
-  // Hide loading
-  setTimeout(() => {
-    document.getElementById('loading').style.display = 'none';
-    animate();
-    // Load living room by default
-    loadPreset('living');
-  }, 800);
+async function loadApiKeys() {
+  try {
+    const res  = await fetch("/user/api-keys");
+    const data = await res.json();
+    const el   = document.getElementById("apiKeysList");
+    if (!el) return;
+    const keys = data.api_keys || {};
+    if (!Object.keys(keys).length) {
+      el.innerHTML = `<p style="color:var(--muted);font-size:.79rem">No API keys yet. Create one below.</p>`;
+      return;
+    }
+    el.innerHTML = Object.entries(keys).map(([key, info]) => `
+      <div class="api-key-row">
+        <span class="api-key-label">${info.label}</span>
+        <input class="api-key-input" value="${key}" readonly onclick="this.select()" />
+        <span style="font-size:.69rem;color:var(--muted)">${info.uses} uses</span>
+        <button class="api-mini-btn danger" onclick="revokeApiKey('${key}')">Revoke</button>
+      </div>`).join("");
+  } catch(e) {}
 }
 
-init();
+async function createApiKey() {
+  const label = (document.getElementById("newKeyLabel")?.value || "My App").trim();
+  try {
+    const res  = await fetch("/user/api-keys/create", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({label}) });
+    const data = await res.json();
+    if (data.error) { showToast("❌ " + data.error); return; }
+    showToast("✅ API key created!");
+    loadApiKeys();
+  } catch(e) { showToast("❌ Error creating key"); }
+}
+
+async function revokeApiKey(key) {
+  if (!confirm("Revoke this API key?")) return;
+  try {
+    const res  = await fetch("/user/api-keys/revoke", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({key}) });
+    const data = await res.json();
+    if (data.success) { showToast("🗑️ Key revoked"); loadApiKeys(); }
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════
+// Gallery renderer
+// ═══════════════════════════════════════════════
+function renderGallery(gridId, items, isFav, emptyMsg) {
+  const grid = document.getElementById(gridId);
+  if (!items?.length) {
+    grid.innerHTML = `<div class="empty-gallery"><div class="ei">${isFav?"🤍":"🕐"}</div>${emptyMsg}</div>`;
+    return;
+  }
+  grid.innerHTML = items.map(item => `
+    <div class="gallery-card">
+      <img src="${item.image_url}" loading="lazy" onerror="this.style.display='none'" />
+      <div class="gallery-card-body">
+        <div class="gallery-card-prompt" title="${(item.original_prompt||'').replace(/"/g,'&quot;')}">${item.original_prompt||"—"}</div>
+        <div class="gallery-card-meta"><span>${item.style||""}</span><span>${item.timestamp||""}</span></div>
+        <div class="gallery-card-actions">
+          <button class="gallery-mini-btn" onclick="usePrompt('${(item.original_prompt||'').replace(/'/g,"\\'")}')">↩ Use</button>
+          <button class="gallery-mini-btn" onclick="navigator.clipboard.writeText('${(item.original_prompt||'').replace(/'/g,"\\'")}').then(()=>showToast('📋 Copied!'))">📋</button>
+          <a href="/download/${item.filename}" class="gallery-mini-btn">⬇</a>
+        </div>
+      </div>
+    </div>`).join("");
+}
+
+function usePrompt(prompt) {
+  document.getElementById("prompt").value = prompt; updateCharCount();
+  document.querySelectorAll(".tab-btn").forEach((b,i) => b.classList.toggle("active", i===0));
+  document.querySelectorAll(".tab-content").forEach((c,i) => c.classList.toggle("active", i===0));
+}
+
+// ═══════════════════════════════════════════════
+// Badge counts — FIXED: refreshes after generate
+// ═══════════════════════════════════════════════
+async function loadBadgeCounts() {
+  try {
+    const [h, f] = await Promise.all([fetch("/history"), fetch("/favorites")]);
+    const hd = await h.json(), fd = await f.json();
+    document.getElementById("historyBadge").textContent = (hd.history||[]).length;
+    document.getElementById("favBadge").textContent     = (fd.favorites||[]).length;
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════
+// Toast
+// ═══════════════════════════════════════════════
+let toastT = null;
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// ═══════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════
+applyTranslations();
+setupGoogleBtn();
+handleUrlParams();   // handle Google OAuth redirect
+checkSession();
+loadBadgeCounts();
+
+async function checkSession() { await loadSession(); }
 </script>
 </body>
 </html>
