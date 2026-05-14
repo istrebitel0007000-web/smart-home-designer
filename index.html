@@ -1,1274 +1,1436 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Image Generator</title>
-  <style>
-    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-    :root {
-      --bg:#0f0f13; --surface:#1a1a24; --surface2:#22222f;
-      --border:#2e2e42; --accent:#7c6fff; --accent2:#a78bfa;
-      --green:#34d399; --yellow:#fbbf24; --red:#f87171;
-      --text:#e8e8f0; --muted:#8888a8; --radius:14px;
-    }
-    body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
-
-    /* ── Header ── */
-    header { background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460); border-bottom:1px solid var(--border); padding:13px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
-    .logo { display:flex; align-items:center; gap:9px; }
-    .logo-icon { width:35px; height:35px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:16px; }
-    .logo h1 { font-size:1.15rem; font-weight:700; }
-    .logo span { color:var(--accent2); }
-    .header-right { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
-    .lang-switcher { display:flex; gap:3px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:3px; }
-    .lang-btn { padding:4px 10px; border:none; border-radius:5px; font-size:0.77rem; font-weight:600; cursor:pointer; transition:all .2s; background:transparent; color:var(--muted); }
-    .lang-btn.active { background:var(--accent); color:#fff; }
-    .lang-btn:hover:not(.active) { background:var(--surface2); color:var(--text); }
-    .user-area { display:flex; align-items:center; gap:6px; }
-    .user-chip { background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:4px 12px 4px 4px; font-size:0.79rem; font-weight:600; color:var(--accent2); display:flex; align-items:center; gap:6px; }
-    .user-avatar { width:24px; height:24px; border-radius:50%; object-fit:cover; }
-    .user-avatar-placeholder { width:24px; height:24px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; font-weight:700; }
-    .header-btn { padding:5px 12px; border-radius:7px; font-size:0.77rem; font-weight:600; cursor:pointer; transition:all .2s; border:1px solid var(--border); background:var(--surface2); color:var(--text); }
-    .header-btn:hover { border-color:var(--accent); color:var(--accent2); }
-    .header-btn.login-btn { background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; color:#fff; }
-
-    /* ── Usage bar ── */
-    .usage-bar-wrap { background:var(--surface); border-bottom:1px solid var(--border); padding:5px 20px; display:none; align-items:center; gap:9px; }
-    .usage-bar-wrap.show { display:flex; }
-    .usage-label { font-size:0.72rem; color:var(--muted); white-space:nowrap; }
-    .usage-bar-bg { flex:1; height:5px; background:var(--border); border-radius:3px; overflow:hidden; }
-    .usage-bar-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--green),var(--accent)); transition:width .4s; }
-    .usage-bar-fill.warning { background:linear-gradient(90deg,var(--yellow),var(--red)); }
-    .usage-count { font-size:0.72rem; color:var(--text); font-weight:600; white-space:nowrap; }
-
-    /* ── Tabs ── */
-    .tabs { display:flex; border-bottom:1px solid var(--border); padding:0 20px; background:var(--surface); overflow-x:auto; }
-    .tab-btn { padding:10px 14px; border:none; background:transparent; color:var(--muted); font-size:0.82rem; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; transition:all .2s; white-space:nowrap; display:flex; align-items:center; gap:5px; }
-    .tab-btn.active { color:var(--accent2); border-bottom-color:var(--accent); }
-    .tab-btn:hover:not(.active) { color:var(--text); }
-    .tab-badge { background:var(--accent); color:#fff; font-size:0.6rem; font-weight:700; padding:1px 5px; border-radius:8px; }
-    .tab-content { display:none; }
-    .tab-content.active { display:block; }
-
-    /* ── Layout ── */
-    main { max-width:1200px; margin:0 auto; padding:18px; display:grid; grid-template-columns:385px 1fr; gap:18px; align-items:start; }
-    @media (max-width:800px) { main { grid-template-columns:1fr; } }
-
-    /* ── Panel ── */
-    .panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
-    .panel-header { padding:12px 16px; border-bottom:1px solid var(--border); background:var(--surface2); font-weight:600; font-size:0.78rem; color:var(--accent2); text-transform:uppercase; letter-spacing:.06em; display:flex; align-items:center; gap:6px; }
-    .panel-body { padding:16px; }
-
-    /* ── Form ── */
-    label { display:block; font-size:0.73rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:5px; }
-    textarea, input[type="text"], input[type="password"], select { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:0.87rem; padding:8px 11px; font-family:inherit; transition:border-color .2s; }
-    textarea { resize:vertical; min-height:88px; }
-    textarea:focus, input:focus, select:focus { outline:none; border-color:var(--accent); }
-    select option { background:var(--surface2); }
-    .form-group { margin-bottom:13px; }
-    .char-count { font-size:0.68rem; color:var(--muted); text-align:right; margin-top:3px; }
-
-    /* ── Prompt row ── */
-    .prompt-row { position:relative; }
-    .prompt-actions { display:flex; gap:5px; margin-top:5px; }
-    .prompt-action-btn { flex:1; padding:6px 7px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; color:var(--muted); font-size:0.73rem; font-weight:600; cursor:pointer; transition:all .18s; display:flex; align-items:center; justify-content:center; gap:3px; }
-    .prompt-action-btn:hover { border-color:var(--accent); color:var(--text); }
-    .autocomplete-box { position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--surface2); border:1px solid var(--accent); border-radius:8px; overflow:hidden; display:none; box-shadow:0 8px 24px rgba(0,0,0,.4); }
-    .autocomplete-item { padding:7px 11px; cursor:pointer; font-size:0.83rem; transition:background .15s; display:flex; align-items:center; gap:6px; }
-    .autocomplete-item:hover { background:rgba(124,111,255,.15); }
-
-    /* ── Lang hint ── */
-    .lang-hint { background:rgba(124,111,255,.07); border:1px solid rgba(124,111,255,.22); border-radius:8px; padding:8px 11px; font-size:0.76rem; color:var(--accent2); margin-bottom:12px; }
-
-    /* ── Style/Size grid ── */
-    .style-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:5px; }
-    .style-card { background:var(--bg); border:1px solid var(--border); border-radius:7px; padding:7px 9px; cursor:pointer; transition:all .18s; display:flex; align-items:center; gap:6px; font-size:0.78rem; color:var(--muted); user-select:none; }
-    .style-card:hover,.style-card.active { border-color:var(--accent); color:var(--text); }
-    .style-card.active { background:rgba(124,111,255,.12); }
-    .size-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:5px; }
-    .size-card { background:var(--bg); border:1px solid var(--border); border-radius:7px; padding:7px; cursor:pointer; transition:all .18s; font-size:0.76rem; color:var(--muted); text-align:center; }
-    .size-card:hover,.size-card.active { border-color:var(--accent); color:var(--text); }
-    .size-card.active { background:rgba(124,111,255,.12); }
-
-    /* ── Generate btn ── */
-    #generateBtn { width:100%; padding:12px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; border-radius:8px; color:#fff; font-size:0.93rem; font-weight:700; cursor:pointer; transition:all .2s; margin-top:5px; }
-    #generateBtn:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 8px 24px rgba(124,111,255,.4); }
-    #generateBtn:disabled { opacity:.6; cursor:not-allowed; transform:none; }
-
-    /* ── Result ── */
-    .result-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:300px; color:var(--muted); text-align:center; gap:10px; }
-    .result-placeholder .big-icon { font-size:46px; opacity:.2; }
-    #resultImage { width:100%; border-radius:9px; display:none; }
-
-    /* ── Translation badge ── */
-    #translationBadge { display:none; margin-bottom:11px; border-radius:8px; overflow:hidden; border:1px solid rgba(52,211,153,.3); }
-    .badge-header { background:rgba(52,211,153,.1); padding:7px 11px; display:flex; align-items:center; gap:6px; font-size:0.76rem; font-weight:600; color:var(--green); }
-    .badge-body { background:rgba(52,211,153,.03); padding:7px 11px; font-size:0.73rem; color:var(--muted); }
-    .badge-body .en-prompt { color:var(--text); font-style:italic; margin-top:2px; }
-
-    /* ── Image actions ── */
-    .image-actions { display:flex; gap:5px; margin-top:9px; flex-wrap:wrap; }
-    .action-btn { flex:1; min-width:70px; padding:8px 5px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; color:var(--text); font-size:0.74rem; font-weight:600; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:3px; }
-    .action-btn:hover { border-color:var(--accent); background:rgba(124,111,255,.1); }
-    .action-btn.fav-active { border-color:var(--red); color:var(--red); background:rgba(248,113,113,.08); }
-    .action-btn.active-feature { border-color:var(--accent); color:var(--accent2); background:rgba(124,111,255,.12); }
-
-    /* ── Meta chips ── */
-    .image-meta { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:9px; }
-    .meta-chip { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:5px 7px; text-align:center; }
-    .meta-label { font-size:0.63rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
-    .meta-value { font-size:0.77rem; font-weight:600; margin-top:1px; }
-
-    /* ── Feature panels ── */
-    .feature-panel { margin-top:10px; background:var(--surface2); border:1px solid var(--border); border-radius:9px; padding:12px; display:none; }
-    .feature-panel.show { display:block; }
-    .feature-panel h3 { font-size:0.79rem; font-weight:700; color:var(--accent2); margin-bottom:10px; display:flex; align-items:center; gap:5px; }
-    .feature-row { display:flex; gap:7px; align-items:flex-end; flex-wrap:wrap; margin-bottom:9px; }
-    .feature-row .form-group { flex:1; min-width:100px; margin-bottom:0; }
-    .feature-btn { padding:8px 13px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; border-radius:7px; color:#fff; font-size:0.78rem; font-weight:700; cursor:pointer; transition:all .2s; white-space:nowrap; }
-    .feature-btn:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 14px rgba(124,111,255,.4); }
-    .feature-btn:disabled { opacity:.55; cursor:not-allowed; transform:none; }
-    .variations-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:9px; margin-top:9px; }
-    .variation-card { border-radius:8px; overflow:hidden; border:1px solid var(--border); }
-    .variation-card img { width:100%; display:block; }
-    .variation-card-footer { padding:6px 8px; display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; color:var(--muted); }
-    .var-dl { background:none; border:none; color:var(--accent2); cursor:pointer; font-size:0.7rem; font-weight:600; }
-    .compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:9px; }
-    .compare-card { border-radius:8px; overflow:hidden; border:1px solid var(--border); }
-    .compare-card img { width:100%; display:block; }
-    .compare-card-label { padding:6px 9px; font-size:0.75rem; font-weight:600; background:var(--surface2); display:flex; justify-content:space-between; }
-    .process-result { margin-top:9px; }
-    .process-result img { width:100%; border-radius:8px; border:1px solid var(--accent); }
-    .process-result-info { font-size:0.75rem; color:var(--muted); margin-top:5px; display:flex; justify-content:space-between; align-items:center; }
-    .wm-options { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:9px; }
-    .wm-options .form-group { margin-bottom:0; }
-    input[type="range"] { flex:1; accent-color:var(--accent); }
-
-    /* ── Spinner ── */
-    .spinner { display:none; flex-direction:column; align-items:center; justify-content:center; min-height:240px; gap:13px; color:var(--muted); }
-    .spinner-ring { width:42px; height:42px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
-    @keyframes spin { to { transform:rotate(360deg); } }
-    .spinner-steps { font-size:0.78rem; text-align:center; line-height:1.9; }
-    .spinner-steps .step.active { color:var(--accent2); font-weight:600; }
-    .spinner-steps .step.done { color:var(--green); }
-    .mini-spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:4px; }
-
-    /* ── Error ── */
-    .error-box { display:none; background:rgba(248,113,113,.07); border:1px solid rgba(248,113,113,.3); border-radius:8px; padding:10px; color:var(--red); font-size:0.81rem; }
-
-    /* ── Auth Modal ── */
-    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.78); z-index:1000; display:none; align-items:center; justify-content:center; padding:20px; }
-    .modal-overlay.show { display:flex; }
-    .modal { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:24px; width:100%; max-width:360px; position:relative; }
-    .modal h2 { font-size:1.05rem; font-weight:700; margin-bottom:18px; text-align:center; }
-    .modal-tabs { display:flex; margin-bottom:18px; background:var(--bg); border-radius:8px; padding:3px; gap:0; }
-    .modal-tab { flex:1; padding:7px; border:none; background:transparent; color:var(--muted); font-size:0.81rem; font-weight:600; cursor:pointer; border-radius:6px; transition:all .2s; }
-    .modal-tab.active { background:var(--accent); color:#fff; }
-    .modal-close { position:absolute; top:12px; right:12px; background:none; border:none; color:var(--muted); font-size:1.1rem; cursor:pointer; }
-    .modal-close:hover { color:var(--text); }
-    .modal-btn { width:100%; padding:10px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; border-radius:8px; color:#fff; font-size:0.87rem; font-weight:700; cursor:pointer; margin-top:4px; transition:all .2s; }
-    .modal-btn:hover { transform:translateY(-1px); }
-    .modal-error   { background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.3); border-radius:7px; padding:8px 10px; color:var(--red); font-size:0.77rem; margin-bottom:11px; display:none; }
-    .modal-success { background:rgba(52,211,153,.1); border:1px solid rgba(52,211,153,.3); border-radius:7px; padding:8px 10px; color:var(--green); font-size:0.77rem; margin-bottom:11px; display:none; }
-
-    /* ── Google button ── */
-    .google-btn { width:100%; padding:10px; background:#fff; border:1px solid #dadce0; border-radius:8px; color:#3c4043; font-size:0.87rem; font-weight:600; cursor:pointer; margin-bottom:14px; display:flex; align-items:center; justify-content:center; gap:9px; transition:all .2s; }
-    .google-btn:hover { background:#f8f9fa; box-shadow:0 2px 8px rgba(0,0,0,.15); }
-    .google-icon { width:18px; height:18px; }
-    .divider { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
-    .divider-line { flex:1; height:1px; background:var(--border); }
-    .divider-text { font-size:0.72rem; color:var(--muted); white-space:nowrap; }
-
-    /* ── Gallery ── */
-    .gallery-page { padding:18px 20px; }
-    .gallery-page h2 { font-size:0.98rem; font-weight:700; margin-bottom:13px; }
-    .gallery-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(175px,1fr)); gap:10px; }
-    .gallery-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; transition:all .2s; }
-    .gallery-card:hover { border-color:var(--accent); transform:translateY(-2px); }
-    .gallery-card img { width:100%; aspect-ratio:1; object-fit:cover; display:block; }
-    .gallery-card-body { padding:8px 10px; }
-    .gallery-card-prompt { font-size:0.73rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .gallery-card-meta { font-size:0.65rem; color:var(--muted); margin-top:3px; display:flex; justify-content:space-between; }
-    .gallery-card-actions { display:flex; gap:4px; margin-top:6px; }
-    .gallery-mini-btn { flex:1; padding:4px; background:var(--surface2); border:1px solid var(--border); border-radius:5px; color:var(--muted); font-size:0.67rem; cursor:pointer; transition:all .15s; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; }
-    .gallery-mini-btn:hover { border-color:var(--accent); color:var(--text); }
-    .empty-gallery { text-align:center; color:var(--muted); padding:44px 20px; }
-    .empty-gallery .ei { font-size:40px; opacity:.16; margin-bottom:9px; }
-
-    /* ── Profile ── */
-    .profile-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin:18px 20px; }
-    .profile-box h2 { font-size:0.98rem; font-weight:700; margin-bottom:13px; display:flex; align-items:center; gap:9px; }
-    .profile-avatar { width:40px; height:40px; border-radius:50%; object-fit:cover; }
-    .profile-avatar-placeholder { width:40px; height:40px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-size:16px; color:#fff; font-weight:700; }
-    .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:14px; }
-    .stat-card { background:var(--bg); border:1px solid var(--border); border-radius:9px; padding:11px; text-align:center; }
-    .stat-number { font-size:1.35rem; font-weight:700; color:var(--accent2); }
-    .stat-label { font-size:0.69rem; color:var(--muted); margin-top:3px; }
-    .plan-badge { display:inline-block; padding:3px 11px; border-radius:10px; font-size:0.73rem; font-weight:700; margin-bottom:13px; }
-    .plan-free { background:rgba(136,136,168,.15); color:var(--muted); }
-    .plan-pro  { background:rgba(124,111,255,.2); color:var(--accent2); }
-    .logout-btn { padding:8px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--red); font-size:0.81rem; font-weight:600; cursor:pointer; transition:all .2s; }
-    .logout-btn:hover { border-color:var(--red); background:rgba(248,113,113,.08); }
-    .google-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(66,133,244,.1); border:1px solid rgba(66,133,244,.3); border-radius:6px; padding:3px 9px; font-size:0.72rem; color:#4285f4; margin-bottom:13px; }
-
-    /* ── API Keys ── */
-    .api-section { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin:0 20px 18px; }
-    .api-section h3 { font-size:.86rem; font-weight:700; color:var(--accent2); margin-bottom:4px; }
-    .api-section p { font-size:.77rem; color:var(--muted); margin-bottom:13px; }
-    .api-key-row { display:flex; gap:7px; margin-bottom:9px; align-items:center; flex-wrap:wrap; }
-    .api-key-input { flex:1; min-width:180px; background:var(--bg); border:1px solid var(--border); border-radius:7px; color:var(--text); font-size:.74rem; padding:6px 9px; font-family:monospace; }
-    .api-key-label { font-size:.71rem; color:var(--muted); flex-shrink:0; min-width:60px; }
-    .api-mini-btn { padding:5px 11px; border-radius:6px; font-size:.73rem; font-weight:600; cursor:pointer; transition:all .2s; border:1px solid var(--border); background:var(--surface2); color:var(--text); white-space:nowrap; }
-    .api-mini-btn:hover { border-color:var(--accent); color:var(--accent2); }
-    .api-mini-btn.danger { color:var(--red); }
-    .api-mini-btn.danger:hover { border-color:var(--red); background:rgba(248,113,113,.08); }
-    .api-docs-box { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:11px; font-size:.74rem; color:var(--muted); font-family:monospace; margin-top:11px; line-height:1.7; }
-    .api-docs-box .hl { color:var(--accent2); }
-
-    /* ── Login prompt ── */
-    .login-prompt { background:rgba(124,111,255,.07); border:1px solid rgba(124,111,255,.22); border-radius:9px; padding:13px 15px; text-align:center; margin:18px 20px; }
-    .login-prompt p { font-size:0.83rem; color:var(--muted); margin-bottom:10px; }
-    .login-prompt button { padding:7px 18px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; border-radius:7px; color:#fff; font-size:0.81rem; font-weight:600; cursor:pointer; }
-
-    /* ── Share popup ── */
-    .share-popup { position:fixed; bottom:66px; right:20px; background:var(--surface2); border:1px solid var(--accent); border-radius:10px; padding:13px 15px; max-width:300px; z-index:999; display:none; box-shadow:0 8px 24px rgba(0,0,0,.5); }
-    .share-popup.show { display:block; }
-    .share-popup h4 { font-size:0.81rem; font-weight:700; margin-bottom:8px; color:var(--accent2); }
-    .share-link-box { display:flex; gap:5px; }
-    .share-link-box input { flex:1; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:0.73rem; padding:5px 8px; }
-    .share-link-box button { padding:5px 10px; background:var(--accent); border:none; border-radius:6px; color:#fff; font-size:0.73rem; font-weight:600; cursor:pointer; }
-    .share-popup-close { position:absolute; top:7px; right:9px; background:none; border:none; color:var(--muted); cursor:pointer; font-size:.95rem; }
-
-    /* ── Sep ── */
-    .sep { border:none; border-top:1px solid var(--border); margin:12px 0; }
-
-    /* ── Toast ── */
-    #toast { position:fixed; bottom:18px; right:18px; z-index:9999; background:var(--surface2); border:1px solid var(--accent); border-radius:8px; padding:8px 14px; color:var(--text); font-size:0.8rem; font-weight:600; transform:translateY(70px); opacity:0; transition:all .3s; pointer-events:none; }
-    #toast.show { transform:translateY(0); opacity:1; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Smart Home Designer 3D — AI Powered</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+:root{--bg:#0f1117;--panel:#1a1d27;--panel2:#21253a;--border:#2e3250;--accent:#4f7cff;--gold:#f0c040;--text:#e8eaf0;--text2:#8b90b0;--success:#3dd68c;--danger:#e84545;--sw:240px;--th:56px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;display:flex;flex-direction:column;-webkit-tap-highlight-color:transparent}
+/* TOPBAR */
+#topbar{height:var(--th);background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;padding:0 10px;z-index:100;flex-shrink:0;overflow-x:auto}
+.logo{display:flex;align-items:center;gap:7px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;color:var(--text);white-space:nowrap}
+.logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),#7b5fff);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.badge{background:linear-gradient(135deg,var(--accent),#7b5fff);color:#fff;font-size:8px;font-weight:700;padding:2px 6px;border-radius:20px}
+.sep{width:1px;height:24px;background:var(--border);margin:0 1px;flex-shrink:0}
+.pb{padding:4px 9px;border-radius:7px;border:1px solid var(--border);background:var(--panel2);color:var(--text2);font-size:10px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.pb:hover{border-color:var(--accent);color:var(--accent)}
+.tr{margin-left:auto;display:flex;align-items:center;gap:4px;flex-shrink:0}
+.ab{padding:5px 10px;border-radius:7px;border:none;background:var(--accent);color:#fff;font-size:10px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:3px;white-space:nowrap}
+.ab:hover{background:#3d6be8;transform:translateY(-1px)}
+.ab:disabled{opacity:.35;cursor:default;transform:none}
+.ab.g{background:#22a96a}.ab.g:hover{background:#1a8a58}
+.ab.d{background:var(--danger)}.ab.d:hover{background:#c73333}
+.ab.w{background:#e08020}.ab.w:hover{background:#c06010}
+.ab.s{background:var(--panel2);border:1px solid var(--border);color:var(--text2)}
+/* LAYOUT */
+#main{display:flex;flex:1;overflow:hidden}
+/* SIDEBAR */
+#sidebar{width:var(--sw);background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.ss{padding:8px 10px 2px;font-size:9px;font-weight:700;color:var(--text2);letter-spacing:1.2px;text-transform:uppercase}
+.og{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:2px 6px}
+.oi{padding:6px 4px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);cursor:pointer;text-align:center;transition:all .15s;color:var(--text2);user-select:none}
+.oi:hover{border-color:var(--accent);color:var(--text);background:rgba(79,124,255,.1)}
+.oi.da{border-color:var(--gold)!important;color:var(--gold)!important;background:rgba(240,192,64,.1)!important}
+.oi-icon{font-size:16px;display:block;margin-bottom:1px}
+.oi-name{font-size:9px;line-height:1.2}
+.sb-scroll{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+/* CANVAS */
+#cw{flex:1;position:relative;overflow:hidden;touch-action:none}
+#tc{width:100%;height:100%;display:block}
+/* HUD */
+#hud-tl{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:4px;pointer-events:none}
+.hc{background:rgba(26,29,39,.92);border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:10px;color:var(--text2);backdrop-filter:blur(10px);pointer-events:all}
+.hc span{color:var(--text);font-weight:600}
+#hud-br{position:absolute;bottom:46px;right:10px;display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.cc{display:flex;gap:3px}
+.cb{width:34px;height:34px;border-radius:7px;background:rgba(26,29,39,.92);border:1px solid var(--border);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;backdrop-filter:blur(10px);transition:all .15s;user-select:none}
+.cb:hover{border-color:var(--accent);color:var(--accent)}
+.cb.on{border-color:var(--success)!important;color:var(--success)!important;background:rgba(61,214,140,.1)!important}
+.cb.ow{border-color:var(--gold)!important;color:var(--gold)!important}
+#sbar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(26,29,39,.92);border:1px solid var(--border);border-radius:9px;padding:4px 12px;font-size:10px;color:var(--text2);backdrop-filter:blur(10px);white-space:nowrap}
+/* TOAST */
+#toast{position:absolute;top:12px;left:50%;transform:translateX(-50%) translateY(-60px);background:rgba(26,29,39,.97);border:1px solid var(--border);border-radius:9px;padding:6px 14px;font-size:11px;color:var(--text);backdrop-filter:blur(12px);transition:transform .3s ease;z-index:700;white-space:nowrap;pointer-events:none}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.ts{border-color:var(--success);color:var(--success)}
+#toast.te{border-color:var(--danger);color:var(--danger)}
+#toast.tw{border-color:var(--gold);color:var(--gold)}
+/* LOADING */
+#loading{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:999}
+.lr{width:54px;height:54px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* RIGHT PANEL */
+#rp{width:288px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.rph{padding:10px 12px 8px;border-bottom:1px solid var(--border);font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px}
+.rps{flex:1;overflow-y:auto;padding:8px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.oli{display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:6px;border:1px solid transparent;cursor:pointer;transition:all .15s;margin-bottom:2px}
+.oli:hover{background:var(--panel2);border-color:var(--border)}
+.oli.sel{background:rgba(79,124,255,.12);border-color:var(--accent)}
+.oli.ms{background:rgba(240,192,64,.1);border-color:var(--gold)}
+.oli-i{font-size:13px}.oli-n{font-size:11px;flex:1}
+.oli-d{opacity:0;font-size:12px;color:var(--danger);cursor:pointer;padding:1px 3px}
+.oli:hover .oli-d{opacity:1}
+/* PROPS */
+.pg{margin-bottom:10px}
+.pl{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px;font-weight:700}
+.pr{display:flex;gap:3px;margin-bottom:3px}
+.pi{flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:4px 5px;color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif;outline:none;min-width:0}
+.pi:focus{border-color:var(--accent)}
+.pil{font-size:8px;color:var(--text2);text-align:center;margin-top:1px}
+.pc{display:flex;flex-direction:column;flex:1}
+.cr{display:flex;gap:3px;flex-wrap:wrap;margin-top:3px}
+.cs{width:19px;height:19px;border-radius:4px;cursor:pointer;border:2px solid transparent;transition:all .1s}
+.cs:hover,.cs.a{border-color:#fff;transform:scale(1.2)}
+.mr{display:flex;gap:3px;flex-wrap:wrap;margin-top:3px}
+.mb{padding:3px 6px;border-radius:4px;border:1px solid var(--border);background:var(--panel2);color:var(--text2);font-size:9px;cursor:pointer;transition:all .1s}
+.mb:hover,.mb.a{border-color:var(--accent);color:var(--accent)}
+.rr{display:flex;align-items:center;gap:6px}
+.rr input[type=range]{flex:1;accent-color:var(--accent)}
+.rv{font-size:10px;color:var(--text);font-weight:600;min-width:32px;text-align:right}
+.tip{background:rgba(79,124,255,.08);border:1px solid rgba(79,124,255,.25);border-radius:7px;padding:7px 9px;font-size:10px;color:var(--text2);line-height:1.5;margin-bottom:8px}
+.tip strong{color:var(--accent)}
+/* AI */
+#aip{border-top:1px solid var(--border);display:flex;flex-direction:column;max-height:240px}
+.aih{padding:7px 11px;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;border-bottom:1px solid var(--border);background:rgba(79,124,255,.06)}
+.aid{width:6px;height:6px;border-radius:50%;background:var(--success);animation:pulse 2s infinite}
+#aim{flex:1;overflow-y:auto;padding:7px 9px;font-size:10px;line-height:1.5;color:var(--text2);scrollbar-width:thin}
+.am{margin-bottom:6px}.am.u{color:var(--accent)}.am.ai{color:var(--text2)}
+.air{display:flex;gap:4px;padding:5px 7px;border-top:1px solid var(--border)}
+#ai-in{flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:4px 7px;color:var(--text);font-size:10px;font-family:'DM Sans',sans-serif;outline:none}
+#ai-in:focus{border-color:var(--accent)}
+#ai-sb{background:var(--accent);border:none;border-radius:6px;padding:4px 9px;color:#fff;font-size:12px;cursor:pointer}
+/* VIEW/FLOOR */
+.vb{display:flex;gap:3px;padding:4px 6px 2px}
+.vbt{flex:1;padding:4px;border-radius:5px;border:1px solid var(--border);background:var(--panel2);color:var(--text2);font-size:9px;text-align:center;cursor:pointer;transition:all .15s}
+.vbt:hover,.vbt.a{border-color:var(--accent);color:var(--accent);background:rgba(79,124,255,.1)}
+.fb{display:flex;gap:3px;padding:2px 6px 6px}
+.fbt{flex:1;padding:3px 2px;border-radius:5px;border:1px solid var(--border);background:var(--panel2);color:var(--text2);font-size:8px;text-align:center;cursor:pointer;transition:all .15s}
+.fbt:hover,.fbt.a{border-color:var(--gold);color:var(--gold)}
+.ar{padding:2px 8px 5px;display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text2)}
+input[type=range]{flex:1;accent-color:var(--accent)}
+/* OVERLAYS */
+#snap-ind{position:absolute;top:10px;right:10px;background:rgba(61,214,140,.15);border:1px solid var(--success);border-radius:7px;padding:4px 9px;font-size:10px;color:var(--success);backdrop-filter:blur(10px);display:none;pointer-events:none}
+#draw-ban{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(240,192,64,.15);border:1px solid var(--gold);border-radius:7px;padding:4px 13px;font-size:10px;color:var(--gold);pointer-events:none;display:none;z-index:52}
+#ms-bar{position:absolute;top:48px;left:50%;transform:translateX(-50%);background:rgba(26,29,39,.95);border:1px solid var(--gold);border-radius:7px;padding:5px 13px;font-size:10px;color:var(--gold);pointer-events:none;display:none;z-index:52}
+#dim-lbl{position:absolute;background:rgba(26,29,39,.92);border:1px solid var(--accent);border-radius:5px;padding:2px 8px;font-size:10px;color:var(--accent);pointer-events:none;display:none;z-index:51}
+#meas-lbl{position:absolute;background:rgba(26,29,39,.95);border:1px solid var(--gold);border-radius:6px;padding:3px 9px;font-size:11px;color:var(--gold);pointer-events:none;display:none;z-index:51}
+#meas-ov{position:absolute;inset:0;cursor:crosshair;display:none;z-index:50}
+/* AREA DISPLAY */
+#area-chip{display:none}
+/* CONTEXT MENU */
+#ctx-menu{position:fixed;background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:5px;z-index:800;display:none;min-width:160px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.ctx-item{padding:7px 12px;border-radius:6px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--text2);transition:all .1s}
+.ctx-item:hover{background:var(--panel2);color:var(--text)}
+.ctx-item.cd{color:var(--danger)}.ctx-item.cd:hover{background:rgba(232,69,69,.1)}
+.ctx-sep{height:1px;background:var(--border);margin:3px 0}
+/* HELP MODAL */
+#help-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:900}
+#help-modal.open{display:flex}
+#help-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;max-width:500px;width:90vw;max-height:80vh;overflow-y:auto}
+#help-box h2{font-family:'Space Grotesk',sans-serif;font-size:16px;margin-bottom:14px;color:var(--text)}
+.hk-row{display:flex;align-items:baseline;gap:8px;margin-bottom:7px;font-size:12px}
+.hk-key{background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:10px;color:var(--accent);font-family:monospace;white-space:nowrap}
+.hk-desc{color:var(--text2)}
+.hk-sec{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin:12px 0 6px}
+/* API KEY MODAL */
+#api-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:900}
+#api-modal.open{display:flex}
+#api-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;max-width:420px;width:90vw}
+#api-box h2{font-family:'Space Grotesk',sans-serif;font-size:15px;margin-bottom:10px}
+#api-box p{font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:12px}
+#api-key-in{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-size:12px;font-family:monospace;outline:none;margin-bottom:10px}
+#api-key-in:focus{border-color:var(--accent)}
+/* FP MODAL */
+#fp-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:800}
+#fp-modal.open{display:flex}
+#fp-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;max-width:90vw;max-height:90vh;display:flex;flex-direction:column;gap:8px}
+#fp-cv{border:1px solid var(--border);border-radius:5px;background:#1a1e2e}
+.fpb{display:flex;gap:7px;justify-content:flex-end}
+/* MULTISEL PANEL */
+#ms-panel{padding:8px 10px;border-top:1px solid var(--border);display:none}
+</style>
 </head>
 <body>
 
-<!-- AUTH MODAL -->
-<div class="modal-overlay" id="authModal">
-  <div class="modal">
-    <button class="modal-close" onclick="closeAuth()">✕</button>
-    <h2>🔐 Account</h2>
+<div id="topbar">
+  <div class="logo"><div class="logo-icon">🏠</div>Smart Home<span class="badge">3D PRO</span></div>
+  <div class="sep"></div>
+  <button class="pb" onclick="loadPreset('bedroom')">🛏 Bed</button>
+  <button class="pb" onclick="loadPreset('living')">🛋 Living</button>
+  <button class="pb" onclick="loadPreset('kitchen')">🍳 Kitchen</button>
+  <button class="pb" onclick="loadPreset('office')">💼 Office</button>
+  <button class="pb" onclick="loadPreset('bathroom')">🚿 Bath</button>
+  <button class="pb" onclick="loadPreset('studio')">🏢 Studio</button>
+  <div class="sep"></div>
+  <button class="pb" onclick="clearScene()">🗑 Clear</button>
+  <div class="sep"></div>
+  <button class="ab s" id="btn-undo" onclick="undo()" disabled>↩ Undo</button>
+  <button class="ab s" id="btn-redo" onclick="redo()" disabled>↪ Redo</button>
+  <div class="sep"></div>
+  <div class="tr">
+    <button class="ab g" onclick="saveProject()">💾 Save</button>
+    <button class="ab s" onclick="loadProject()">📂 Load</button>
+    <button class="ab" onclick="exportJSON()">⬇ JSON</button>
+    <button class="ab s" onclick="document.getElementById('imp').click()">⬆ Import</button>
+    <input type="file" id="imp" accept=".json" style="display:none" onchange="importJSON(event)">
+    <div class="sep"></div>
+    <button class="ab w" onclick="openFP()">📐 Plan</button>
+    <button class="ab" onclick="screenshotScene()">📸</button>
+    <button class="ab s" onclick="openSettings()" title="API Key Settings">⚙️</button>
+    <button class="ab s" onclick="openHelp()" title="Help">❓</button>
+  </div>
+</div>
 
-    <!-- Google Sign-In button (shown only if configured) -->
-    <div id="googleLoginWrap">
-      <button class="google-btn" onclick="googleLogin()">
-        <svg class="google-icon" viewBox="0 0 48 48">
-          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-        </svg>
-        Continue with Google
-      </button>
-      <div class="divider">
-        <div class="divider-line"></div>
-        <span class="divider-text">or use username</span>
-        <div class="divider-line"></div>
+<div id="main">
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sb-scroll">
+      <div class="ss">Views</div>
+      <div class="vb">
+        <div class="vbt a" onclick="setView('perspective')" id="vb-p">3D</div>
+        <div class="vbt" onclick="setView('top')" id="vb-t">Top</div>
+        <div class="vbt" onclick="setView('front')" id="vb-f">Front</div>
+        <div class="vbt" onclick="setView('side')" id="vb-s">Side</div>
       </div>
-    </div>
-
-    <div class="modal-tabs">
-      <button class="modal-tab active" id="tabLogin"    onclick="switchAuthTab('login')">Login</button>
-      <button class="modal-tab"        id="tabRegister" onclick="switchAuthTab('register')">Sign Up</button>
-    </div>
-    <div class="modal-error"   id="authError"></div>
-    <div class="modal-success" id="authSuccess"></div>
-    <div class="form-group"><label>Username</label><input type="text" id="authUsername" placeholder="Enter username" maxlength="30" /></div>
-    <div class="form-group"><label>Password</label><input type="password" id="authPassword" placeholder="Enter password" onkeydown="if(event.key==='Enter')submitAuth()" /></div>
-    <button class="modal-btn" onclick="submitAuth()" id="authSubmitBtn">Login</button>
-  </div>
-</div>
-
-<!-- SHARE POPUP -->
-<div class="share-popup" id="sharePopup">
-  <button class="share-popup-close" onclick="closeSharePopup()">✕</button>
-  <h4>🔗 Share Image</h4>
-  <div class="share-link-box">
-    <input type="text" id="shareLinkInput" readonly />
-    <button onclick="copyShareLink()">Copy</button>
-  </div>
-</div>
-
-<!-- HEADER -->
-<header>
-  <div class="logo">
-    <div class="logo-icon">🎨</div>
-    <h1>AI <span>Image</span> Generator</h1>
-  </div>
-  <div class="header-right">
-    <div class="lang-switcher">
-      <button class="lang-btn active" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
-      <button class="lang-btn"        data-lang="ru" onclick="setLang('ru')">🇷🇺 RU</button>
-      <button class="lang-btn"        data-lang="uz" onclick="setLang('uz')">🇺🇿 UZ</button>
-    </div>
-    <div class="user-area" id="userArea">
-      <button class="header-btn login-btn" onclick="openAuth()">🔐 <span data-i18n="loginBtn">Login</span></button>
-    </div>
-  </div>
-</header>
-
-<!-- USAGE BAR -->
-<div class="usage-bar-wrap" id="usageBarWrap">
-  <span class="usage-label" id="usagePlan">Free Plan</span>
-  <div class="usage-bar-bg"><div class="usage-bar-fill" id="usageBarFill" style="width:0%"></div></div>
-  <span class="usage-count" id="usageCount">0/10</span>
-</div>
-
-<!-- TABS -->
-<div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('generate',this)">✨ <span data-i18n="tabGenerate">Generate</span></button>
-  <button class="tab-btn" onclick="switchTab('history',this)">🕐 <span data-i18n="tabHistory">History</span> <span class="tab-badge" id="historyBadge">0</span></button>
-  <button class="tab-btn" onclick="switchTab('favorites',this)">❤️ <span data-i18n="tabFavorites">Favorites</span> <span class="tab-badge" id="favBadge">0</span></button>
-  <button class="tab-btn" onclick="switchTab('downloads',this)">⬇️ <span data-i18n="tabDownloads">Downloads</span></button>
-  <button class="tab-btn" onclick="switchTab('profile',this)">👤 <span data-i18n="tabProfile">Profile</span></button>
-</div>
-
-<!-- TAB: GENERATE -->
-<div class="tab-content active" id="tab-generate">
-  <main>
-    <!-- LEFT -->
-    <div>
-      <div class="panel">
-        <div class="panel-header">✍️ <span data-i18n="describeTitle">Describe Your Image</span></div>
-        <div class="panel-body">
-          <div class="lang-hint">🌐 <span data-i18n="langHint">Write in <strong>English</strong>, <strong>Russian</strong>, or <strong>Uzbek</strong></span></div>
-          <div class="form-group">
-            <label data-i18n="promptLabel">Your Description</label>
-            <div class="prompt-row">
-              <textarea id="prompt" maxlength="500" placeholder="A golden sunset over the mountains..." data-i18n-placeholder="promptPlaceholder"></textarea>
-              <div class="autocomplete-box" id="autocompleteBox"></div>
-            </div>
-            <div class="char-count"><span id="charCount">0</span>/500</div>
-            <div class="prompt-actions">
-              <button class="prompt-action-btn" onclick="getRandomPrompt()">🎲 <span data-i18n="randomBtn">Random</span></button>
-              <button class="prompt-action-btn" onclick="copyPrompt()">📋 <span data-i18n="copyPromptBtn">Copy</span></button>
-              <button class="prompt-action-btn" onclick="clearPrompt()">🗑️ <span data-i18n="clearBtn">Clear</span></button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label data-i18n="negativeLabel">Exclude (optional)</label>
-            <input type="text" id="negative" placeholder="blurry, low quality..." data-i18n-placeholder="negativePlaceholder" />
-          </div>
-          <hr class="sep" />
-          <div class="form-group">
-            <label data-i18n="styleLabel">Art Style</label>
-            <div class="style-grid">
-              {% for key, style in styles.items() %}
-              <div class="style-card {% if key == 'realistic' %}active{% endif %}" data-style="{{ key }}" onclick="selectStyle(this)">
-                <span>{{ style.emoji }}</span><span>{{ style.label }}</span>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-          <div class="form-group">
-            <label data-i18n="sizeLabel">Image Size</label>
-            <div class="size-grid">
-              {% for key, size in sizes.items() %}
-              <div class="size-card {% if key == 'square' %}active{% endif %}" data-size="{{ key }}" onclick="selectSize(this)">{{ size.label }}</div>
-              {% endfor %}
-            </div>
-          </div>
-          <button id="generateBtn" onclick="generate()">✨ <span data-i18n="generateBtn">Generate Image</span></button>
+      <div class="ss">Floor</div>
+      <div class="fb">
+        <div class="fbt a" onclick="setFloor('wood')" id="fb-wood">🪵 Wood</div>
+        <div class="fbt" onclick="setFloor('tile')" id="fb-tile">⬜ Tile</div>
+        <div class="fbt" onclick="setFloor('marble')" id="fb-marble">💎 Marble</div>
+        <div class="fbt" onclick="setFloor('concrete')" id="fb-concrete">🏗 Conc.</div>
+      </div>
+      <div class="ss">Lighting</div>
+      <div class="ar">☀️<input type="range" min="0.1" max="2" step="0.05" value="0.6" oninput="setAmbient(this.value)">💡</div>
+      <div class="ar" style="padding-top:0">🌙<input type="range" min="0" max="1" step="0.05" value="0.3" oninput="setShadow(this.value)">🔆</div>
+      <div class="ss">Draw Room</div>
+      <div style="padding:2px 6px 6px">
+        <div class="oi" id="draw-btn" onclick="toggleDraw()" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:8px">
+          <span style="font-size:14px">✏️</span><span style="font-size:10px">Draw Room Walls</span>
         </div>
       </div>
-    </div>
-
-    <!-- RIGHT -->
-    <div>
-      <div class="panel">
-        <div class="panel-header">🖼️ <span data-i18n="resultTitle">Generated Image</span></div>
-        <div class="panel-body">
-          <div id="translationBadge">
-            <div class="badge-header">🌐 <span id="badgeLangLabel"></span></div>
-            <div class="badge-body"><div id="badgePrompt" class="en-prompt"></div></div>
-          </div>
-          <div class="spinner" id="spinner">
-            <div class="spinner-ring"></div>
-            <div class="spinner-steps">
-              <div class="step" id="step1" data-i18n="step1">🌐 Understanding your description…</div>
-              <div class="step" id="step2" data-i18n="step2">🎨 Preparing image prompt…</div>
-              <div class="step" id="step3" data-i18n="step3">⚡ Generating image…</div>
-            </div>
-          </div>
-          <div class="error-box" id="errorBox"></div>
-          <div class="result-placeholder" id="placeholder">
-            <div class="big-icon">🖼️</div>
-            <div>
-              <p style="font-size:.93rem;color:var(--text);font-weight:600;" data-i18n="placeholderTitle">Your image will appear here</p>
-              <p style="font-size:.78rem;margin-top:4px;" data-i18n="placeholderSub">Describe what you want and click Generate</p>
-            </div>
-          </div>
-          <img id="resultImage" alt="Generated" />
-          <div class="image-actions" id="imageActions" style="display:none;">
-            <button class="action-btn" id="favBtn" onclick="toggleFavorite()">🤍 <span data-i18n="favBtn">Favorite</span></button>
-            <button class="action-btn" onclick="copyResultPrompt()">📋 <span data-i18n="copyBtn">Copy</span></button>
-            <button class="action-btn" onclick="downloadImage()">⬇️ <span data-i18n="downloadBtn">Download</span></button>
-            <button class="action-btn" onclick="shareImage()">🔗 <span data-i18n="shareBtn">Share</span></button>
-          </div>
-          <div class="image-actions" id="featureActions" style="display:none;">
-            <button class="action-btn" id="btnVariations" onclick="toggleFeature('variations')">🔁 <span data-i18n="varBtn">Variations</span></button>
-            <button class="action-btn" id="btnCompare"    onclick="toggleFeature('compare')">⚖️ <span data-i18n="cmpBtn">Compare</span></button>
-            <button class="action-btn" id="btnUpscale"    onclick="toggleFeature('upscale')">🔍 <span data-i18n="upscaleBtn">Upscale</span></button>
-            <button class="action-btn" id="btnWatermark"  onclick="toggleFeature('watermark')">💧 <span data-i18n="wmBtn">Watermark</span></button>
-          </div>
-          <div class="image-meta" id="imageMeta" style="display:none;">
-            <div class="meta-chip"><div class="meta-label">Style</div><div class="meta-value" id="metaStyle">—</div></div>
-            <div class="meta-chip"><div class="meta-label">Size</div><div class="meta-value" id="metaSize">—</div></div>
-            <div class="meta-chip"><div class="meta-label">Language</div><div class="meta-value" id="metaLang">—</div></div>
-          </div>
-
-          <!-- VARIATIONS -->
-          <div class="feature-panel" id="panel-variations">
-            <h3>🔁 Image Variations</h3>
-            <div class="feature-row">
-              <div class="form-group"><label>Count</label>
-                <select id="varCount"><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
-              </div>
-              <button class="feature-btn" id="varBtn2" onclick="generateVariations()">🔁 Generate</button>
-            </div>
-            <div id="variationsResult"></div>
-          </div>
-          <!-- COMPARE -->
-          <div class="feature-panel" id="panel-compare">
-            <h3>⚖️ Compare Styles</h3>
-            <div class="feature-row">
-              <div class="form-group"><label>Style A</label>
-                <select id="styleA">{% for key, style in styles.items() %}<option value="{{ key }}" {% if key=='realistic' %}selected{% endif %}>{{ style.emoji }} {{ style.label }}</option>{% endfor %}</select>
-              </div>
-              <div class="form-group"><label>Style B</label>
-                <select id="styleB">{% for key, style in styles.items() %}<option value="{{ key }}" {% if key=='anime' %}selected{% endif %}>{{ style.emoji }} {{ style.label }}</option>{% endfor %}</select>
-              </div>
-              <button class="feature-btn" id="cmpBtn2" onclick="generateCompare()">⚖️ Compare</button>
-            </div>
-            <div id="compareResult"></div>
-          </div>
-          <!-- UPSCALE -->
-          <div class="feature-panel" id="panel-upscale">
-            <h3>🔍 Upscaler</h3>
-            <div class="feature-row">
-              <div class="form-group"><label>Scale</label>
-                <select id="scaleSelect"><option value="2">2x</option><option value="4">4x</option></select>
-              </div>
-              <button class="feature-btn" id="upscaleBtn2" onclick="upscaleImage()">🔍 Upscale</button>
-            </div>
-            <div id="upscaleResult"></div>
-          </div>
-          <!-- WATERMARK -->
-          <div class="feature-panel" id="panel-watermark">
-            <h3>💧 Watermark</h3>
-            <div class="form-group"><label>Text</label><input type="text" id="wmText" placeholder="AI Generated" maxlength="50" /></div>
-            <div class="wm-options">
-              <div class="form-group"><label>Position</label>
-                <select id="wmPosition">
-                  <option value="bottom-right">↘ Bottom Right</option>
-                  <option value="bottom-left">↙ Bottom Left</option>
-                  <option value="top-right">↗ Top Right</option>
-                  <option value="top-left">↖ Top Left</option>
-                  <option value="center">⊕ Center</option>
-                </select>
-              </div>
-              <div class="form-group"><label>Size</label>
-                <select id="wmSize"><option value="small">Small</option><option value="medium" selected>Medium</option><option value="large">Large</option></select>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Opacity: <span id="opacityVal">60%</span></label>
-              <div style="display:flex;gap:7px;align-items:center">
-                <span style="font-size:.69rem;color:var(--muted)">0%</span>
-                <input type="range" id="wmOpacity" min="10" max="100" value="60" oninput="document.getElementById('opacityVal').textContent=this.value+'%'" style="flex:1" />
-                <span style="font-size:.69rem;color:var(--muted)">100%</span>
-              </div>
-            </div>
-            <button class="feature-btn" style="width:100%;" id="wmBtn2" onclick="addWatermark()">💧 Add Watermark</button>
-            <div id="watermarkResult"></div>
-          </div>
-        </div>
+      <div class="ss">Structure</div>
+      <div class="og">
+        <div class="oi" onclick="addObj('wall-h')"><span class="oi-icon">🧱</span><div class="oi-name">Wall H</div></div>
+        <div class="oi" onclick="addObj('wall-v')"><span class="oi-icon">🧱</span><div class="oi-name">Wall V</div></div>
+        <div class="oi" onclick="addObj('door')"><span class="oi-icon">🚪</span><div class="oi-name">Door</div></div>
+        <div class="oi" onclick="addObj('window')"><span class="oi-icon">🪟</span><div class="oi-name">Window</div></div>
+        <div class="oi" onclick="addObj('column')"><span class="oi-icon">🏛</span><div class="oi-name">Column</div></div>
+        <div class="oi" onclick="addObj('stairs')"><span class="oi-icon">🪜</span><div class="oi-name">Stairs</div></div>
+      </div>
+      <div class="ss">Furniture</div>
+      <div class="og">
+        <div class="oi" onclick="addObj('sofa')"><span class="oi-icon">🛋</span><div class="oi-name">Sofa</div></div>
+        <div class="oi" onclick="addObj('bed')"><span class="oi-icon">🛏</span><div class="oi-name">Bed</div></div>
+        <div class="oi" onclick="addObj('table')"><span class="oi-icon">🪑</span><div class="oi-name">Table</div></div>
+        <div class="oi" onclick="addObj('chair')"><span class="oi-icon">🪑</span><div class="oi-name">Chair</div></div>
+        <div class="oi" onclick="addObj('dining-set')"><span class="oi-icon">🍽</span><div class="oi-name">Dining Set</div></div>
+        <div class="oi" onclick="addObj('desk')"><span class="oi-icon">🖥</span><div class="oi-name">Desk</div></div>
+        <div class="oi" onclick="addObj('wardrobe')"><span class="oi-icon">🗄</span><div class="oi-name">Wardrobe</div></div>
+        <div class="oi" onclick="addObj('bookshelf')"><span class="oi-icon">📚</span><div class="oi-name">Bookshelf</div></div>
+        <div class="oi" onclick="addObj('tv')"><span class="oi-icon">📺</span><div class="oi-name">TV 65"</div></div>
+        <div class="oi" onclick="addObj('bathtub')"><span class="oi-icon">🛁</span><div class="oi-name">Bathtub</div></div>
+        <div class="oi" onclick="addObj('shower')"><span class="oi-icon">🚿</span><div class="oi-name">Shower</div></div>
+        <div class="oi" onclick="addObj('toilet')"><span class="oi-icon">🚽</span><div class="oi-name">Toilet</div></div>
+        <div class="oi" onclick="addObj('sink')"><span class="oi-icon">🚰</span><div class="oi-name">Sink</div></div>
+        <div class="oi" onclick="addObj('kitchen-counter')"><span class="oi-icon">🍳</span><div class="oi-name">Counter</div></div>
+        <div class="oi" onclick="addObj('fridge')"><span class="oi-icon">🧊</span><div class="oi-name">Fridge</div></div>
+        <div class="oi" onclick="addObj('dishwasher')"><span class="oi-icon">🍽</span><div class="oi-name">Dishwasher</div></div>
+        <div class="oi" onclick="addObj('washer')"><span class="oi-icon">🫧</span><div class="oi-name">Washer</div></div>
+        <div class="oi" onclick="addObj('rug')"><span class="oi-icon">🟥</span><div class="oi-name">Rug</div></div>
+        <div class="oi" onclick="addObj('curtain')"><span class="oi-icon">🪟</span><div class="oi-name">Curtain</div></div>
+        <div class="oi" onclick="addObj('plant')"><span class="oi-icon">🌿</span><div class="oi-name">Plant</div></div>
+        <div class="oi" onclick="addObj('fireplace')"><span class="oi-icon">🔥</span><div class="oi-name">Fireplace</div></div>
+        <div class="oi" onclick="addObj('piano')"><span class="oi-icon">🎹</span><div class="oi-name">Piano</div></div>
+        <div class="oi" onclick="addObj('outdoor-chair')"><span class="oi-icon">🪑</span><div class="oi-name">Out.Chair</div></div>
+        <div class="oi" onclick="addObj('outdoor-table')"><span class="oi-icon">☀️</span><div class="oi-name">Out.Table</div></div>
+      </div>
+      <div class="ss">Electrical</div>
+      <div class="og">
+        <div class="oi" onclick="addObj('outlet')"><span class="oi-icon">🔌</span><div class="oi-name">Outlet</div></div>
+        <div class="oi" onclick="addObj('switch')"><span class="oi-icon">💡</span><div class="oi-name">Switch</div></div>
+        <div class="oi" onclick="addObj('ceiling-light')"><span class="oi-icon">💡</span><div class="oi-name">Ceil.Light</div></div>
+        <div class="oi" onclick="addObj('ceiling-fan')"><span class="oi-icon">🌀</span><div class="oi-name">Ceil.Fan</div></div>
+        <div class="oi" onclick="addObj('ac')"><span class="oi-icon">❄</span><div class="oi-name">AC Unit</div></div>
+        <div class="oi" onclick="addObj('radiator')"><span class="oi-icon">🌡</span><div class="oi-name">Radiator</div></div>
+        <div class="oi" onclick="addObj('wifi')"><span class="oi-icon">📶</span><div class="oi-name">WiFi</div></div>
       </div>
     </div>
-  </main>
-</div>
+  </div>
 
-<!-- TAB: HISTORY -->
-<div class="tab-content" id="tab-history">
-  <div class="gallery-page">
-    <h2 data-i18n="historyTitle">🕐 My Generated Images</h2>
-    <div class="gallery-grid" id="historyGrid">
-      <div class="empty-gallery"><div class="ei">🕐</div><span data-i18n="historyEmpty">No images yet. Generate your first!</span></div>
+  <!-- CANVAS -->
+  <div id="cw">
+    <canvas id="tc"></canvas>
+    <div id="hud-tl">
+      <div class="hc">Objs:<span id="s-obj">0</span> Walls:<span id="s-wal">0</span> Lights:<span id="s-lit">0</span> Area:<span id="s-area">0</span>m²</div>
+    </div>
+    <div id="snap-ind">⊞ Snap ON</div>
+    <div id="draw-ban">✏️ DRAW — click corners · dbl-click or Esc to finish</div>
+    <div id="ms-bar">📦 <span id="ms-cnt">0</span> selected · Shift+click add · Del remove · drag to move</div>
+    <div id="dim-lbl"></div>
+    <div id="meas-lbl"></div>
+    <div id="meas-ov"></div>
+    <div id="hud-br">
+      <div class="cc">
+        <button class="cb" onclick="resetCam()" title="Reset view">⌂</button>
+        <button class="cb" onclick="zoomIn()" title="Zoom in">+</button>
+        <button class="cb" onclick="zoomOut()" title="Zoom out">−</button>
+        <button class="cb" onclick="toggleShadows()" title="Shadows">🌑</button>
+        <button class="cb" id="snap-btn" onclick="toggleSnap()" title="Grid snap (G)">⊞</button>
+        <button class="cb" id="meas-btn" onclick="toggleMeasure()" title="Measure (M)">📏</button>
+      </div>
+    </div>
+    <div id="sbar">🖱 Drag=rotate · Scroll=zoom · Right=pan · Click=select · Shift=multi · Del=remove · Ctrl+D=duplicate</div>
+    <div id="loading"><div class="lr"></div><div style="font-size:13px;color:var(--text2)">Loading 3D scene…</div></div>
+    <div id="toast"></div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="rp">
+    <div class="rph">🏗 Scene Objects</div>
+    <div class="rps">
+      <div class="tip"><strong>Tips:</strong> Shift+click=multi · Ctrl+D=duplicate · Right-click=menu · G=snap · M=measure · ✏️=draw room</div>
+      <div id="obj-list"></div>
+    </div>
+    <div id="props-panel" style="padding:8px 10px;border-top:1px solid var(--border);display:none">
+      <div class="pl">Selected</div>
+      <div id="sel-nm" style="font-weight:600;font-size:12px;margin-bottom:8px;color:var(--text)"></div>
+      <div id="dim-disp" style="font-size:10px;color:var(--gold);margin-bottom:7px;display:none"></div>
+      <div class="pg">
+        <div class="pl">Position (m)</div>
+        <div class="pr">
+          <div class="pc"><input class="pi" id="px" type="number" step="0.1" oninput="updPos()"><div class="pil">X</div></div>
+          <div class="pc"><input class="pi" id="py" type="number" step="0.1" oninput="updPos()"><div class="pil">Y</div></div>
+          <div class="pc"><input class="pi" id="pz" type="number" step="0.1" oninput="updPos()"><div class="pil">Z</div></div>
+        </div>
+      </div>
+      <div class="pg">
+        <div class="pl">Rotation Y</div>
+        <div class="rr"><input type="range" min="0" max="360" step="5" id="rot-sl" oninput="updRot(this.value)"><span class="rv" id="rot-v">0°</span></div>
+        <div class="pr" style="margin-top:4px">
+          <button class="ab s" onclick="rotBy(-90)" style="flex:1;justify-content:center;font-size:9px">↺-90°</button>
+          <button class="ab s" onclick="rotBy(90)" style="flex:1;justify-content:center;font-size:9px">↻+90°</button>
+          <button class="ab s" onclick="updRot(0);document.getElementById('rot-sl').value=0" style="flex:1;justify-content:center;font-size:9px">Reset</button>
+        </div>
+      </div>
+      <div class="pg">
+        <div class="pl">Scale W/H/D</div>
+        <div class="pr">
+          <div class="pc"><input class="pi" id="sx" type="number" step="0.1" min="0.05" max="20" oninput="updScale()"><div class="pil">W</div></div>
+          <div class="pc"><input class="pi" id="sy" type="number" step="0.1" min="0.05" max="20" oninput="updScale()"><div class="pil">H</div></div>
+          <div class="pc"><input class="pi" id="sz" type="number" step="0.1" min="0.05" max="20" oninput="updScale()"><div class="pil">D</div></div>
+        </div>
+      </div>
+      <div class="pg"><div class="pl">Color</div><div class="cr" id="c-sw"></div></div>
+      <div class="pg"><div class="pl">Material</div><div class="mr" id="m-row"></div></div>
+      <div style="display:flex;gap:4px">
+        <button class="ab s" onclick="duplicateSelected()" style="flex:1;justify-content:center;font-size:10px">⧉ Duplicate</button>
+        <button class="ab d" onclick="delSel()" style="flex:1;justify-content:center;font-size:10px">🗑 Delete</button>
+      </div>
+    </div>
+    <div id="ms-panel">
+      <div class="pl">Multi (<span id="ms-c2">0</span> objects)</div>
+      <div style="display:flex;gap:4px;margin-top:6px">
+        <button class="ab d" onclick="delMulti()" style="flex:1;justify-content:center;font-size:10px">🗑 Delete All</button>
+        <button class="ab s" onclick="clearMulti()" style="flex:1;justify-content:center;font-size:10px">Deselect</button>
+      </div>
+    </div>
+    <div id="aip">
+      <div class="aih"><div class="aid"></div>AI Home Advisor<span style="font-size:9px;color:var(--accent);margin-left:auto">Claude AI</span></div>
+      <div id="aim"><div class="am ai">👋 Hi! I'm your AI home design advisor. I can also AUTO-PLACE furniture — try: "Set up a cozy bedroom" or "Add office furniture"!</div></div>
+      <div class="air">
+        <input id="ai-in" placeholder="Ask or auto-place furniture…" onkeydown="if(event.key==='Enter')sendAI()">
+        <button id="ai-sb" onclick="sendAI()">↑</button>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- TAB: FAVORITES -->
-<div class="tab-content" id="tab-favorites">
-  <div class="gallery-page">
-    <h2 data-i18n="favoritesTitle">❤️ Favorite Images</h2>
-    <div class="gallery-grid" id="favoritesGrid">
-      <div class="empty-gallery"><div class="ei">🤍</div><span data-i18n="favoritesEmpty">No favorites yet.</span></div>
+<!-- CONTEXT MENU -->
+<div id="ctx-menu">
+  <div class="ctx-item" onclick="ctxDuplicate()">⧉ Duplicate</div>
+  <div class="ctx-item" onclick="ctxRotate90()">↻ Rotate 90°</div>
+  <div class="ctx-item" onclick="ctxRotate180()">↺ Rotate 180°</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="ctxSendFront()">⬆ Bring Forward</div>
+  <div class="ctx-item" onclick="ctxSendBack()">⬇ Send Backward</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item cd" onclick="ctxDelete()">🗑 Delete</div>
+</div>
+
+<!-- FLOOR PLAN MODAL -->
+<div id="fp-modal">
+  <div id="fp-box">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px">📐 Floor Plan</span>
+      <span style="font-size:10px;color:var(--text2)">top-down · with labels & dimensions</span>
+      <button onclick="closeFP()" class="ab s" style="margin-left:auto">✕</button>
+    </div>
+    <canvas id="fp-cv"></canvas>
+    <div class="fpb"><button class="ab" onclick="dlFP()">⬇ Download PNG</button></div>
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div id="help-modal">
+  <div id="help-box">
+    <h2>⌨️ Smart Home Designer — Help</h2>
+    <div class="hk-sec">Keyboard Shortcuts</div>
+    <div class="hk-row"><span class="hk-key">Ctrl+Z</span><span class="hk-desc">Undo</span></div>
+    <div class="hk-row"><span class="hk-key">Ctrl+Y</span><span class="hk-desc">Redo</span></div>
+    <div class="hk-row"><span class="hk-key">Ctrl+S</span><span class="hk-desc">Save project</span></div>
+    <div class="hk-row"><span class="hk-key">Ctrl+D</span><span class="hk-desc">Duplicate selected object</span></div>
+    <div class="hk-row"><span class="hk-key">Del</span><span class="hk-desc">Delete selected / multi-selected</span></div>
+    <div class="hk-row"><span class="hk-key">G</span><span class="hk-desc">Toggle grid snap (0.5m)</span></div>
+    <div class="hk-row"><span class="hk-key">M</span><span class="hk-desc">Toggle measure tool</span></div>
+    <div class="hk-row"><span class="hk-key">Esc</span><span class="hk-desc">Exit draw mode / close menus</span></div>
+    <div class="hk-row"><span class="hk-key">Arrows</span><span class="hk-desc">Nudge selected object</span></div>
+    <div class="hk-sec">Mouse Controls</div>
+    <div class="hk-row"><span class="hk-key">Left drag</span><span class="hk-desc">Rotate camera</span></div>
+    <div class="hk-row"><span class="hk-key">Right drag</span><span class="hk-desc">Pan camera</span></div>
+    <div class="hk-row"><span class="hk-key">Scroll</span><span class="hk-desc">Zoom in/out</span></div>
+    <div class="hk-row"><span class="hk-key">Click obj</span><span class="hk-desc">Select object</span></div>
+    <div class="hk-row"><span class="hk-key">Shift+click</span><span class="hk-desc">Multi-select</span></div>
+    <div class="hk-row"><span class="hk-key">Right-click</span><span class="hk-desc">Context menu (duplicate, rotate, delete…)</span></div>
+    <div class="hk-row"><span class="hk-key">Drag obj</span><span class="hk-desc">Move object on floor</span></div>
+    <div class="hk-sec">Features</div>
+    <div class="hk-row"><span class="hk-key">✏️ Draw</span><span class="hk-desc">Click floor corners → dbl-click to close room</span></div>
+    <div class="hk-row"><span class="hk-key">📏 Measure</span><span class="hk-desc">Click 2 floor points → shows distance in metres</span></div>
+    <div class="hk-row"><span class="hk-key">📐 Floor Plan</span><span class="hk-desc">Top-down 2D plan with labels, download as PNG</span></div>
+    <div class="hk-row"><span class="hk-key">AI Chat</span><span class="hk-desc">Ask advice OR say "set up a bedroom" to auto-place</span></div>
+    <div class="hk-row"><span class="hk-key">⚙️ Settings</span><span class="hk-desc">Enter your Claude API key to enable AI</span></div>
+    <div style="margin-top:14px;display:flex;justify-content:flex-end">
+      <button class="ab s" onclick="closeHelp()">Close</button>
     </div>
   </div>
 </div>
 
-<!-- TAB: DOWNLOADS -->
-<div class="tab-content" id="tab-downloads">
-  <div class="gallery-page">
-    <h2>⬇️ <span data-i18n="downloadsTitle">Download History</span></h2>
-    <div id="downloadsContent">
-      <div class="login-prompt"><p data-i18n="loginToSeeDownloads">Login to track your downloads</p><button onclick="openAuth()">🔐 Login</button></div>
+<!-- API KEY MODAL -->
+<div id="api-modal">
+  <div id="api-box">
+    <h2>⚙️ AI Settings — Claude API Key</h2>
+    <p>Enter your Anthropic API key to enable the AI Home Advisor and Auto-Place features. Your key is stored only in your browser (localStorage) and never sent anywhere except directly to api.anthropic.com.</p>
+    <input type="password" id="api-key-in" placeholder="sk-ant-api03-…">
+    <div style="display:flex;gap:8px">
+      <button class="ab g" onclick="saveApiKey()" style="flex:1;justify-content:center">Save Key</button>
+      <button class="ab d" onclick="clearApiKey()" style="flex:1;justify-content:center">Clear Key</button>
+      <button class="ab s" onclick="closeSettings()" style="flex:1;justify-content:center">Cancel</button>
     </div>
+    <div id="api-status" style="margin-top:8px;font-size:10px;color:var(--text2)"></div>
   </div>
 </div>
 
-<!-- TAB: PROFILE -->
-<div class="tab-content" id="tab-profile">
-  <div id="profileContent">
-    <div class="login-prompt"><p data-i18n="loginToSeeProfile">Login to see your profile and API keys</p><button onclick="openAuth()">🔐 Login / Sign Up</button></div>
-  </div>
-</div>
-
-<div id="toast"></div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// Pass google_configured from Flask template
-const GOOGLE_CONFIGURED = {{ 'true' if google_configured else 'false' }};
+'use strict';
+// ═══════════════════════════════════════════════
+// SCENE
+// ═══════════════════════════════════════════════
+const canvas=document.getElementById('tc');
+const wrap=document.getElementById('cw');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.0;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x1a1e2e);
+scene.fog=new THREE.FogExp2(0x1a1e2e,0.02);
+const camera=new THREE.PerspectiveCamera(55,1,0.1,200);
+camera.position.set(12,14,16);camera.lookAt(0,0,0);
+function resize(){const w=wrap.clientWidth,h=wrap.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix()}
+window.addEventListener('resize',resize);resize();
 
 // ═══════════════════════════════════════════════
-// i18n
+// LIGHTING
 // ═══════════════════════════════════════════════
-const I18N = {
-  en: {
-    loginBtn:"Login", tabGenerate:"Generate", tabHistory:"History",
-    tabFavorites:"Favorites", tabDownloads:"Downloads", tabProfile:"Profile",
-    describeTitle:"Describe Your Image",
-    langHint:"Write in <strong>English</strong>, <strong>Russian</strong>, or <strong>Uzbek</strong>",
-    promptLabel:"Your Description", promptPlaceholder:"A golden sunset over the mountains...",
-    randomBtn:"Random", copyPromptBtn:"Copy", clearBtn:"Clear",
-    negativeLabel:"Exclude (optional)", negativePlaceholder:"blurry, low quality...",
-    styleLabel:"Art Style", sizeLabel:"Image Size", generateBtn:"Generate Image",
-    resultTitle:"Generated Image",
-    step1:"🌐 Understanding your description…", step2:"🎨 Preparing image prompt…", step3:"⚡ Generating image…",
-    placeholderTitle:"Your image will appear here", placeholderSub:"Describe what you want and click Generate",
-    favBtn:"Favorite", copyBtn:"Copy Prompt", downloadBtn:"Download", shareBtn:"Share",
-    varBtn:"Variations", cmpBtn:"Compare", upscaleBtn:"Upscale", wmBtn:"Watermark",
-    historyTitle:"🕐 My Generated Images", historyEmpty:"No images yet. Generate your first!",
-    favoritesTitle:"❤️ Favorite Images", favoritesEmpty:"No favorites yet.",
-    downloadsTitle:"Download History", loginToSeeDownloads:"Login to track your downloads",
-    loginToSeeProfile:"Login to see your profile and API keys",
-  },
-  ru: {
-    loginBtn:"Войти", tabGenerate:"Создать", tabHistory:"История",
-    tabFavorites:"Избранное", tabDownloads:"Загрузки", tabProfile:"Профиль",
-    describeTitle:"Опишите изображение",
-    langHint:"Пишите на <strong>русском</strong>, <strong>узбекском</strong> или <strong>английском</strong>",
-    promptLabel:"Ваше описание", promptPlaceholder:"Золотой закат над горами...",
-    randomBtn:"Случайный", copyPromptBtn:"Копировать", clearBtn:"Очистить",
-    negativeLabel:"Исключить (необязательно)", negativePlaceholder:"размытость, плохое качество...",
-    styleLabel:"Стиль арта", sizeLabel:"Размер", generateBtn:"Создать изображение",
-    resultTitle:"Созданное изображение",
-    step1:"🌐 Анализирую описание…", step2:"🎨 Готовлю запрос…", step3:"⚡ Генерирую…",
-    placeholderTitle:"Изображение появится здесь", placeholderSub:"Опишите и нажмите «Создать»",
-    favBtn:"В избранное", copyBtn:"Копировать", downloadBtn:"Скачать", shareBtn:"Поделиться",
-    varBtn:"Вариации", cmpBtn:"Сравнить", upscaleBtn:"Увеличить", wmBtn:"Водяной знак",
-    historyTitle:"🕐 Мои изображения", historyEmpty:"Изображений нет. Создайте первое!",
-    favoritesTitle:"❤️ Избранные", favoritesEmpty:"Избранных нет.",
-    downloadsTitle:"История загрузок", loginToSeeDownloads:"Войдите для отслеживания загрузок",
-    loginToSeeProfile:"Войдите для просмотра профиля и ключей API",
-  },
-  uz: {
-    loginBtn:"Kirish", tabGenerate:"Yaratish", tabHistory:"Tarix",
-    tabFavorites:"Sevimlilar", tabDownloads:"Yuklamalar", tabProfile:"Profil",
-    describeTitle:"Tasviringizni tasvirlab bering",
-    langHint:"<strong>O'zbek</strong>, <strong>rus</strong> yoki <strong>ingliz</strong> tilida yozing",
-    promptLabel:"Sizning tavsifingiz", promptPlaceholder:"Tog'lar ustidagi oltin quyosh botishi...",
-    randomBtn:"Tasodifiy", copyPromptBtn:"Nusxalash", clearBtn:"Tozalash",
-    negativeLabel:"Istisno (ixtiyoriy)", negativePlaceholder:"loyqa, past sifat...",
-    styleLabel:"San'at uslubi", sizeLabel:"Rasm o'lchami", generateBtn:"Rasm yaratish",
-    resultTitle:"Yaratilgan rasm",
-    step1:"🌐 Tavsif tushunilmoqda…", step2:"🎨 So'rov tayyorlanmoqda…", step3:"⚡ Rasm yaratilmoqda…",
-    placeholderTitle:"Rasmingiz shu yerda paydo bo'ladi", placeholderSub:"Tasvirlab, yaratish tugmasini bosing",
-    favBtn:"Sevimli", copyBtn:"Nusxalash", downloadBtn:"Yuklab olish", shareBtn:"Ulashish",
-    varBtn:"Variantlar", cmpBtn:"Solishtirish", upscaleBtn:"Kattalashtirish", wmBtn:"Belgi",
-    historyTitle:"🕐 Mening rasmlarim", historyEmpty:"Hali rasm yo'q. Birinchisini yarating!",
-    favoritesTitle:"❤️ Sevimli rasmlar", favoritesEmpty:"Sevimlilar yo'q.",
-    downloadsTitle:"Yuklamalar tarixi", loginToSeeDownloads:"Yuklamalar uchun kiring",
-    loginToSeeProfile:"Profil va API kalitlari uchun kiring",
-  },
+const ambL=new THREE.AmbientLight(0xffeedd,0.6);scene.add(ambL);
+const sunL=new THREE.DirectionalLight(0xfff5e0,1.2);
+sunL.position.set(15,25,10);sunL.castShadow=true;
+sunL.shadow.mapSize.set(2048,2048);
+sunL.shadow.camera.near=0.5;sunL.shadow.camera.far=80;
+sunL.shadow.camera.left=sunL.shadow.camera.bottom=-20;
+sunL.shadow.camera.right=sunL.shadow.camera.top=20;
+sunL.shadow.bias=-0.001;scene.add(sunL);
+scene.add(new THREE.DirectionalLight(0x8090ff,0.3).clone());
+const fillL=new THREE.DirectionalLight(0x8090ff,0.3);fillL.position.set(-8,10,-5);scene.add(fillL);
+scene.add(new THREE.HemisphereLight(0xffffff,0x334455,0.4));
+// Dynamic point lights for ceiling lights
+const ptLights=[];
+function setAmbient(v){ambL.intensity=parseFloat(v)}
+function setShadow(v){sunL.intensity=parseFloat(v)*2+0.4}
+let shadowsOn=true;
+function toggleShadows(){shadowsOn=!shadowsOn;renderer.shadowMap.enabled=shadowsOn;scene.traverse(o=>{if(o.isMesh){o.castShadow=shadowsOn;o.receiveShadow=shadowsOn}})}
+
+// ═══════════════════════════════════════════════
+// TEXTURES
+// ═══════════════════════════════════════════════
+function mkTex(fn,rx,ry){const t=fn();t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx||4,ry||4);return t}
+function woodTex_fn(){
+  const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,256,256);g.addColorStop(0,'#8B5E3C');g.addColorStop(.3,'#A0714F');g.addColorStop(.6,'#8B5E3C');g.addColorStop(1,'#7A4F2E');
+  x.fillStyle=g;x.fillRect(0,0,256,256);x.strokeStyle='rgba(60,30,10,.25)';x.lineWidth=1.5;
+  for(let i=0;i<30;i++){x.beginPath();const y=(i/30)*256+Math.random()*6;x.moveTo(0,y);for(let p=0;p<256;p+=8)x.lineTo(p,y+Math.sin(p*.05+i)*3);x.stroke()}
+  return new THREE.CanvasTexture(c);
+}
+function tileTex_fn(){
+  const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');
+  x.fillStyle='#d8d0c0';x.fillRect(0,0,256,256);x.strokeStyle='#b0a890';x.lineWidth=4;
+  for(let p=0;p<256;p+=64)x.strokeRect(p+2,2,60,252);for(let p=0;p<256;p+=64)x.strokeRect(2,p+2,252,60);
+  return new THREE.CanvasTexture(c);
+}
+function marbleTex_fn(){
+  const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');
+  x.fillStyle='#f0ece4';x.fillRect(0,0,256,256);
+  for(let i=0;i<20;i++){x.strokeStyle=`rgba(180,160,140,${Math.random()*.4+.1})`;x.lineWidth=Math.random()*3;x.beginPath();const p=Math.random()*256;x.moveTo(p,0);for(let q=0;q<256;q+=5)x.lineTo(p+Math.sin(q*.1+i)*30+Math.random()*10,q);x.stroke()}
+  return new THREE.CanvasTexture(c);
+}
+function concTex_fn(){
+  const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');
+  x.fillStyle='#8a8880';x.fillRect(0,0,256,256);
+  for(let i=0;i<2000;i++){const p=Math.random()*256,q=Math.random()*256,g=Math.random()*40-20;x.fillStyle=`rgba(${120+g|0},${118+g|0},${116+g|0},.3)`;x.fillRect(p,q,Math.random()*4,Math.random()*4)}
+  return new THREE.CanvasTexture(c);
+}
+function fabTex_fn(r,g,b){
+  const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
+  x.fillStyle=`rgb(${r},${g},${b})`;x.fillRect(0,0,128,128);
+  for(let i=0;i<128;i+=4){x.strokeStyle='rgba(0,0,0,.08)';x.lineWidth=2;x.beginPath();x.moveTo(i,0);x.lineTo(i,128);x.stroke();x.beginPath();x.moveTo(0,i);x.lineTo(128,i);x.stroke()}
+  return new THREE.CanvasTexture(c);
+}
+function metalTex_fn(){
+  const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,128,128);g.addColorStop(0,'#c8c8cc');g.addColorStop(.5,'#e0e0e4');g.addColorStop(1,'#b0b0b4');
+  x.fillStyle=g;x.fillRect(0,0,128,128);
+  for(let i=0;i<30;i++){x.strokeStyle=`rgba(255,255,255,${Math.random()*.15})`;x.lineWidth=1;x.beginPath();const p=Math.random()*128;x.moveTo(0,p);x.lineTo(128,p);x.stroke()}
+  return new THREE.CanvasTexture(c);
+}
+const TEX={
+  wood:mkTex(woodTex_fn,4,4),tile:mkTex(tileTex_fn,6,6),marble:mkTex(marbleTex_fn,3,3),
+  concrete:mkTex(concTex_fn,4,4),fabric:mkTex(()=>fabTex_fn(80,100,140),3,3),metal:mkTex(metalTex_fn,2,2)
+};
+const MATS={
+  Default:{map:null,roughness:.7,metalness:.05},
+  Wood:{map:TEX.wood,roughness:.85,metalness:0},
+  Fabric:{map:TEX.fabric,roughness:.95,metalness:0},
+  Metal:{map:TEX.metal,roughness:.2,metalness:.8},
+  Marble:{map:TEX.marble,roughness:.1,metalness:.05},
+  Concrete:{map:TEX.concrete,roughness:.9,metalness:0},
 };
 
 // ═══════════════════════════════════════════════
-// State
+// FLOOR
 // ═══════════════════════════════════════════════
-let currentLang   = "en";
-let selectedStyle = "realistic";
-let selectedSize  = "square";
-let currentResult = null;
-let currentUser   = null;
-let stepTimer     = null;
-let acTimer       = null;
-let activeFeature = null;
-let authMode      = "login";
+let curFloor='wood',floorMesh=null;
+function createFloor(style){
+  if(floorMesh)scene.remove(floorMesh);
+  const tm={wood:TEX.wood,tile:TEX.tile,marble:TEX.marble,concrete:TEX.concrete};
+  const cm={wood:0x8B5E3C,tile:0xd8d0c0,marble:0xf0ece4,concrete:0x8a8880};
+  floorMesh=new THREE.Mesh(
+    new THREE.PlaneGeometry(30,30,40,40),
+    new THREE.MeshStandardMaterial({map:tm[style]||TEX.wood,color:cm[style]||0x8B5E3C,roughness:style==='marble'?.1:.8,metalness:style==='marble'?.05:0})
+  );
+  floorMesh.rotation.x=-Math.PI/2;floorMesh.receiveShadow=true;floorMesh.userData.noSel=true;scene.add(floorMesh);
+}
+createFloor('wood');
+function setFloor(s){curFloor=s;createFloor(s);document.querySelectorAll('.fbt').forEach(b=>b.classList.remove('a'));document.getElementById('fb-'+s)?.classList.add('a')}
+const gridH=new THREE.GridHelper(30,30,0x334466,0x222840);gridH.material.opacity=.25;gridH.material.transparent=true;scene.add(gridH);
 
 // ═══════════════════════════════════════════════
-// i18n
+// OBJECT DEFINITIONS
 // ═══════════════════════════════════════════════
-function setLang(lang) {
-  currentLang = lang;
-  document.querySelectorAll(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
-  applyTranslations();
+const OBJ={
+  'wall-h':        {name:'Wall H',         w:4,   h:2.8, d:.2,  color:0xddd8cc,isWall:true, icon:'🧱'},
+  'wall-v':        {name:'Wall V',         w:.2,  h:2.8, d:4,   color:0xddd8cc,isWall:true, icon:'🧱'},
+  'door':          {name:'Door',           w:1,   h:2.1, d:.1,  color:0x8B5E3C,             icon:'🚪'},
+  'window':        {name:'Window',         w:1.2, h:1,   d:.1,  color:0x88ccff,isWin:true,  icon:'🪟'},
+  'column':        {name:'Column',         w:.4,  h:3,   d:.4,  color:0xccc8be,             icon:'🏛'},
+  'stairs':        {name:'Stairs',         w:1.2, h:1.5, d:2.5, color:0xb0a898,             icon:'🪜'},
+  'sofa':          {name:'Sofa',           w:2.2, h:.8,  d:.9,  color:0x6b7fa3,             icon:'🛋'},
+  'bed':           {name:'Bed',            w:1.6, h:.5,  d:2,   color:0x8a9bb0,             icon:'🛏'},
+  'table':         {name:'Table',          w:1.2, h:.75, d:.8,  color:0x9b7a5a,             icon:'🪑'},
+  'chair':         {name:'Chair',          w:.6,  h:.85, d:.6,  color:0x7a8a9a,             icon:'🪑'},
+  'dining-set':    {name:'Dining Set',     w:1.6, h:.75, d:1.6, color:0x9b7a5a,             icon:'🍽'},
+  'desk':          {name:'Desk',           w:1.4, h:.75, d:.7,  color:0x8B7355,             icon:'🖥'},
+  'wardrobe':      {name:'Wardrobe',       w:1.2, h:2,   d:.6,  color:0x705040,             icon:'🗄'},
+  'bookshelf':     {name:'Bookshelf',      w:1,   h:2,   d:.3,  color:0x8B6914,             icon:'📚'},
+  'tv':            {name:'TV 65"',         w:1.6, h:.9,  d:.1,  color:0x1a1a2a,             icon:'📺'},
+  'bathtub':       {name:'Bathtub',        w:.8,  h:.5,  d:1.7, color:0xe8e4dc,             icon:'🛁'},
+  'shower':        {name:'Shower',         w:.9,  h:2.1, d:.9,  color:0xaaddff,isWin:true,  icon:'🚿'},
+  'toilet':        {name:'Toilet',         w:.4,  h:.7,  d:.7,  color:0xf0ece4,             icon:'🚽'},
+  'sink':          {name:'Sink',           w:.6,  h:.85, d:.5,  color:0xe8e4dc,             icon:'🚰'},
+  'kitchen-counter':{name:'Counter',       w:2,   h:.9,  d:.6,  color:0xd4c8a8,             icon:'🍳'},
+  'fridge':        {name:'Fridge',         w:.7,  h:1.8, d:.7,  color:0xe0e4e8,             icon:'🧊'},
+  'dishwasher':    {name:'Dishwasher',     w:.6,  h:.85, d:.6,  color:0xd0d4d8,             icon:'🍽'},
+  'washer':        {name:'Washer',         w:.6,  h:.85, d:.6,  color:0xd8e0e8,             icon:'🫧'},
+  'rug':           {name:'Rug',            w:2,   h:.05, d:1.5, color:0x8B3A3A,             icon:'🟥'},
+  'curtain':       {name:'Curtain',        w:1.5, h:2.4, d:.08, color:0x9988aa,             icon:'🪟'},
+  'plant':         {name:'Plant',          w:.4,  h:1,   d:.4,  color:0x3a7a3a,             icon:'🌿'},
+  'fireplace':     {name:'Fireplace',      w:1.2, h:1,   d:.5,  color:0x5a5a5a,             icon:'🔥'},
+  'piano':         {name:'Piano',          w:1.5, h:1.2, d:.6,  color:0x1a1a1a,             icon:'🎹'},
+  'outdoor-chair': {name:'Outdoor Chair',  w:.7,  h:.9,  d:.7,  color:0x6a8a5a,             icon:'🪑'},
+  'outdoor-table': {name:'Outdoor Table',  w:1.4, h:.75, d:1.4, color:0x7a9a6a,             icon:'☀️'},
+  'outlet':        {name:'Outlet',         w:.1,  h:.1,  d:.05, color:0xffffff,             icon:'🔌'},
+  'switch':        {name:'Switch',         w:.1,  h:.1,  d:.05, color:0xf0f0f0,             icon:'💡'},
+  'ceiling-light': {name:'Ceiling Light',  w:.4,  h:.1,  d:.4,  color:0xfffde0,isLight:true,icon:'💡'},
+  'ceiling-fan':   {name:'Ceiling Fan',    w:1.2, h:.15, d:1.2, color:0xd8d8d8,isLight:true,icon:'🌀'},
+  'ac':            {name:'AC Unit',        w:.9,  h:.3,  d:.2,  color:0xe0e8f0,             icon:'❄'},
+  'radiator':      {name:'Radiator',       w:1,   h:.6,  d:.1,  color:0xd8d8d8,             icon:'🌡'},
+  'wifi':          {name:'WiFi Router',    w:.3,  h:.05, d:.2,  color:0xffffff,             icon:'📶'},
+};
+const COLORS=[0xddd8cc,0x6b7fa3,0x8a9bb0,0x9b7a5a,0x3a7a3a,0x8B3A3A,0x5a5a9a,0xe8e4dc,0xf0c040,0x5a9a5a,0x1a1a2a,0xff6b35,0x4f7cff,0xffffff,0x333344];
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let objs=[],selObj=null,multiSel=[],objCnt=0;
+
+// ═══════════════════════════════════════════════
+// API KEY
+// ═══════════════════════════════════════════════
+let apiKey=localStorage.getItem('shd_api_key')||'';
+function openSettings(){
+  document.getElementById('api-key-in').value=apiKey;
+  const st=document.getElementById('api-status');
+  st.textContent=apiKey?'✅ API key is set':'⚠ No API key — AI features disabled';
+  st.style.color=apiKey?'var(--success)':'var(--gold)';
+  document.getElementById('api-modal').classList.add('open');
 }
-function applyTranslations() {
-  const t = I18N[currentLang];
-  document.querySelectorAll("[data-i18n]").forEach(el => { if (t[el.dataset.i18n] !== undefined) el.innerHTML = t[el.dataset.i18n]; });
-  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { if (t[el.dataset.i18nPlaceholder]) el.placeholder = t[el.dataset.i18nPlaceholder]; });
+function closeSettings(){document.getElementById('api-modal').classList.remove('open')}
+function saveApiKey(){
+  const v=document.getElementById('api-key-in').value.trim();
+  if(!v){showToast('Enter a key first','error');return}
+  apiKey=v;localStorage.setItem('shd_api_key',v);
+  document.getElementById('api-status').textContent='✅ Saved!';
+  document.getElementById('api-status').style.color='var(--success)';
+  showToast('✅ API key saved!','success');
+  setTimeout(closeSettings,1000);
+}
+function clearApiKey(){apiKey='';localStorage.removeItem('shd_api_key');document.getElementById('api-key-in').value='';document.getElementById('api-status').textContent='⚠ Key cleared';showToast('Key cleared')}
+
+// ═══════════════════════════════════════════════
+// HELP MODAL
+// ═══════════════════════════════════════════════
+function openHelp(){document.getElementById('help-modal').classList.add('open')}
+function closeHelp(){document.getElementById('help-modal').classList.remove('open')}
+
+// ═══════════════════════════════════════════════
+// UNDO / REDO
+// ═══════════════════════════════════════════════
+const MAX_H=60;let hist=[],hIdx=-1;
+function snap(){
+  return JSON.stringify(objs.map(o=>({
+    id:o.id,type:o.type,
+    px:o.mesh.position.x,py:o.mesh.position.y,pz:o.mesh.position.z,
+    rx:o.mesh.rotation.x,ry:o.mesh.rotation.y,rz:o.mesh.rotation.z,
+    sx:o.mesh.scale.x,sy:o.mesh.scale.y,sz:o.mesh.scale.z,
+    color:o.mesh.userData.color,mat:o.mesh.userData.mat||'Default',
+  })));
+}
+function pushH(){
+  hist=hist.slice(0,hIdx+1);hist.push(snap());
+  if(hist.length>MAX_H)hist.shift();
+  hIdx=hist.length-1;updUB();
+}
+function applySnap(s){
+  const d=JSON.parse(s);
+  objs.forEach(o=>scene.remove(o.mesh));
+  objs=[];selObj=null;multiSel=[];
+  d.forEach(item=>{
+    const def=OBJ[item.type];if(!def)return;
+    const mesh=buildMesh(def,item.color,item.mat||'Default');
+    mesh.position.set(item.px,item.py,item.pz);
+    mesh.rotation.set(item.rx,item.ry,item.rz);
+    mesh.scale.set(item.sx,item.sy,item.sz);
+    scene.add(mesh);objs.push({id:item.id,type:item.type,mesh});
+    if(item.id>=objCnt)objCnt=item.id+1;
+  });
+  updateList();updateStats();hideProps();syncLights();
+}
+function undo(){if(hIdx<=0)return;hIdx--;applySnap(hist[hIdx]);updUB();showToast('↩ Undone','success')}
+function redo(){if(hIdx>=hist.length-1)return;hIdx++;applySnap(hist[hIdx]);updUB();showToast('↪ Redone','success')}
+function updUB(){
+  const u=document.getElementById('btn-undo'),r=document.getElementById('btn-redo');
+  u.disabled=hIdx<=0;r.disabled=hIdx>=hist.length-1;
+  u.style.opacity=u.disabled?.35:1;r.style.opacity=r.disabled?.35:1;
 }
 
 // ═══════════════════════════════════════════════
-// Google Login
+// GRID SNAP
 // ═══════════════════════════════════════════════
-function googleLogin() {
-  window.location.href = "/auth/google";
+let snapOn=false,snapSz=.5;
+function toggleSnap(){
+  snapOn=!snapOn;
+  document.getElementById('snap-btn').classList.toggle('on',snapOn);
+  document.getElementById('snap-ind').style.display=snapOn?'block':'none';
+  showToast(snapOn?'⊞ Snap ON (0.5m)':'⊞ Snap OFF');
+}
+function sg(v){return snapOn?Math.round(v/snapSz)*snapSz:v}
+
+// ═══════════════════════════════════════════════
+// BUILD MESH
+// ═══════════════════════════════════════════════
+function buildMesh(def,colorHex,matName){
+  const col=colorHex!==undefined?colorHex:def.color;
+  const mp=MATS[matName]||MATS.Default;
+  const mat=new THREE.MeshStandardMaterial({
+    color:col,map:mp.map||null,roughness:def.isWin?.1:mp.roughness,
+    metalness:def.isWin?.1:mp.metalness,transparent:!!def.isWin,opacity:def.isWin?.5:1,
+  });
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(def.w,def.h,def.d),mat);
+  mesh.castShadow=mesh.receiveShadow=true;
+  mesh.userData={color:col,mat:matName||'Default',type:def.name,name:def.name,icon:def.icon,defKey:null};
+  return mesh;
 }
 
-// Show/hide Google button based on config
-function setupGoogleBtn() {
-  const wrap = document.getElementById("googleLoginWrap");
-  if (wrap) wrap.style.display = GOOGLE_CONFIGURED ? "block" : "none";
+// ═══════════════════════════════════════════════
+// REAL POINT LIGHTS for ceiling lights/fans
+// ═══════════════════════════════════════════════
+function syncLights(){
+  ptLights.forEach(l=>{if(l.parent)l.parent.remove(l);scene.remove(l)});
+  ptLights.length=0;
+  objs.forEach(o=>{
+    if(OBJ[o.type]?.isLight){
+      const pl=new THREE.PointLight(0xffe8b0,1.5,8);
+      pl.position.copy(o.mesh.position);pl.position.y-=.2;
+      scene.add(pl);ptLights.push(pl);
+    }
+  });
 }
 
-// Handle Google callback results from URL params
-function handleUrlParams() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("login_success")) {
-    showToast("✅ Logged in with Google!");
-    window.history.replaceState({}, "", "/");
-    loadSession();
-  } else if (params.get("login_error")) {
-    const err = params.get("login_error");
-    showToast("❌ Google login failed: " + err);
-    window.history.replaceState({}, "", "/");
-    openAuth();
+// ═══════════════════════════════════════════════
+// ADD OBJECT
+// ═══════════════════════════════════════════════
+function addObj(type,opts){
+  const def=OBJ[type];if(!def)return;
+  pushH();
+  const mesh=buildMesh(def,opts?.color,opts?.mat||'Default');
+  mesh.userData.defKey=type;
+  const yBase=def.h/2+(def.name==='Rug'?.01:0);
+  mesh.position.set(opts?.px!==undefined?opts.px:sg(Math.random()*4-2),opts?.py!==undefined?opts.py:yBase,opts?.pz!==undefined?opts.pz:sg(Math.random()*4-2));
+  if(opts?.ry)mesh.rotation.y=opts.ry;
+  mesh.userData.type=type;mesh.userData.name=def.name;mesh.userData.icon=def.icon;mesh.userData.defKey=type;
+  scene.add(mesh);
+  const obj={id:objCnt++,type,mesh};
+  objs.push(obj);
+  selectSingle(obj);updateList();updateStats();
+  if(def.isLight)syncLights();
+  pushH();
+  return obj;
+}
+
+// ═══════════════════════════════════════════════
+// DUPLICATE
+// ═══════════════════════════════════════════════
+function duplicateSelected(){
+  if(!selObj)return;
+  const m=selObj.mesh;
+  const def=OBJ[m.userData.defKey||m.userData.type];
+  if(!def)return;
+  pushH();
+  const mesh=buildMesh(def,m.userData.color,m.userData.mat||'Default');
+  mesh.position.set(sg(m.position.x+.5),m.position.y,sg(m.position.z+.5));
+  mesh.rotation.copy(m.rotation);mesh.scale.copy(m.scale);
+  mesh.userData.type=m.userData.type;mesh.userData.name=m.userData.name;mesh.userData.icon=m.userData.icon;mesh.userData.defKey=m.userData.defKey;
+  scene.add(mesh);
+  const obj={id:objCnt++,type:selObj.type,mesh};
+  objs.push(obj);selectSingle(obj);updateList();updateStats();
+  if(OBJ[selObj.type]?.isLight)syncLights();
+  pushH();
+  showToast('⧉ Duplicated!','success');
+}
+
+// ═══════════════════════════════════════════════
+// DRAW ROOM MODE
+// ═══════════════════════════════════════════════
+let drawMode=false,drawPts=[],drawLine=null;
+const flP=new THREE.Plane(new THREE.Vector3(0,1,0),0);
+const dRay=new THREE.Raycaster();
+function getFloorPt(e){
+  const r=canvas.getBoundingClientRect();
+  dRay.setFromCamera({x:((e.clientX-r.left)/r.width)*2-1,y:-((e.clientY-r.top)/r.height)*2+1},camera);
+  const pt=new THREE.Vector3();
+  return dRay.ray.intersectPlane(flP,pt)?{x:sg(pt.x),z:sg(pt.z)}:null;
+}
+function toggleDraw(){
+  drawMode=!drawMode;
+  document.getElementById('draw-btn').classList.toggle('da',drawMode);
+  document.getElementById('draw-ban').style.display=drawMode?'block':'none';
+  if(!drawMode)finishDraw();
+  else{drawPts=[];showToast('✏️ Draw ON — click corners, dbl-click to close','warn')}
+}
+function finishDraw(){
+  if(drawLine){scene.remove(drawLine);drawLine=null}
+  if(drawPts.length>=2){
+    pushH();
+    for(let i=0;i<drawPts.length;i++){
+      const a=drawPts[i],b=drawPts[(i+1)%drawPts.length];
+      const dx=b.x-a.x,dz=b.z-a.z,len=Math.sqrt(dx*dx+dz*dz);
+      if(len<.2)continue;
+      const mesh=new THREE.Mesh(new THREE.BoxGeometry(len,2.8,.2),new THREE.MeshStandardMaterial({color:0xddd8cc,roughness:.8}));
+      mesh.position.set((a.x+b.x)/2,1.4,(a.z+b.z)/2);mesh.rotation.y=Math.atan2(dx,dz);
+      mesh.castShadow=mesh.receiveShadow=true;
+      mesh.userData={type:'wall-h',name:'Wall',icon:'🧱',color:0xddd8cc,mat:'Default',defKey:'wall-h'};
+      scene.add(mesh);objs.push({id:objCnt++,type:'wall-h',mesh});
+    }
+    updateList();updateStats();pushH();
   }
+  drawPts=[];
 }
 
 // ═══════════════════════════════════════════════
-// Usage bar
+// SELECTION
 // ═══════════════════════════════════════════════
-function updateUsageBar(used, limit, plan) {
-  const wrap  = document.getElementById("usageBarWrap");
-  const fill  = document.getElementById("usageBarFill");
-  const count = document.getElementById("usageCount");
-  const planEl= document.getElementById("usagePlan");
-  if (!currentUser) { wrap.classList.remove("show"); return; }
-  wrap.classList.add("show");
-  const pct = Math.min(100, Math.round((used / limit) * 100));
-  fill.style.width   = pct + "%";
-  fill.className     = "usage-bar-fill" + (pct >= 80 ? " warning" : "");
-  count.textContent  = `${used}/${limit} today`;
-  planEl.textContent = plan === "pro" ? "⭐ Pro Plan" : "Free Plan";
+let selOut=null;
+function selectSingle(obj){
+  clearMulti();deselCur();selObj=obj;if(!obj)return;
+  addOutline(obj.mesh);showProps(obj);
+  document.querySelectorAll('.oli').forEach(el=>el.classList.toggle('sel',parseInt(el.dataset.id)===obj.id));
+}
+function addOutline(mesh){
+  if(selOut){if(selOut.parent)selOut.parent.remove(selOut);selOut=null}
+  selOut=new THREE.Mesh(mesh.geometry.clone(),new THREE.MeshBasicMaterial({color:0x6699ff,wireframe:true}));
+  selOut.scale.setScalar(1.02);mesh.add(selOut);
+}
+function deselCur(){if(selObj&&selOut){selObj.mesh.remove(selOut);selOut=null}selObj=null;hideProps()}
+function addToMulti(obj){
+  if(multiSel.includes(obj))multiSel=multiSel.filter(o=>o!==obj);
+  else multiSel.push(obj);
+  refreshMultiUI();
+}
+function clearMulti(){multiSel=[];refreshMultiUI()}
+function refreshMultiUI(){
+  const n=multiSel.length;
+  document.getElementById('ms-bar').style.display=n>1?'block':'none';
+  document.getElementById('ms-cnt').textContent=n;
+  document.getElementById('ms-panel').style.display=n>1?'block':'none';
+  document.getElementById('ms-c2').textContent=n;
+  document.querySelectorAll('.oli').forEach(el=>{
+    const obj=objs.find(o=>o.id===parseInt(el.dataset.id));
+    el.classList.toggle('ms',obj&&multiSel.includes(obj));
+  });
+}
+function delMulti(){
+  if(!multiSel.length)return;pushH();
+  multiSel.forEach(o=>scene.remove(o.mesh));
+  objs=objs.filter(o=>!multiSel.includes(o));
+  multiSel=[];selObj=null;refreshMultiUI();updateList();updateStats();hideProps();syncLights();pushH();
 }
 
 // ═══════════════════════════════════════════════
-// Auth
+// PROPS PANEL
 // ═══════════════════════════════════════════════
-function openAuth()  { document.getElementById("authModal").classList.add("show"); }
-function closeAuth() { document.getElementById("authModal").classList.remove("show"); clearAuthMessages(); }
-function clearAuthMessages() {
-  document.getElementById("authError").style.display   = "none";
-  document.getElementById("authSuccess").style.display = "none";
+function showProps(obj){
+  document.getElementById('props-panel').style.display='block';
+  document.getElementById('ms-panel').style.display='none';
+  document.getElementById('sel-nm').textContent=obj.mesh.userData.icon+' '+obj.mesh.userData.name;
+  refreshInputs(obj);buildSwatches(obj);buildMatBtns(obj);showDims(obj);
 }
-function switchAuthTab(mode) {
-  authMode = mode;
-  document.getElementById("tabLogin").classList.toggle("active",    mode === "login");
-  document.getElementById("tabRegister").classList.toggle("active", mode === "register");
-  document.getElementById("authSubmitBtn").textContent = mode === "login" ? "Login" : "Create Account";
-  clearAuthMessages();
+function hideProps(){
+  document.getElementById('props-panel').style.display='none';
+  document.getElementById('ms-panel').style.display='none';
+  document.getElementById('dim-lbl').style.display='none';
+  document.getElementById('dim-disp').style.display='none';
 }
-async function submitAuth() {
-  const username = document.getElementById("authUsername").value.trim();
-  const password = document.getElementById("authPassword").value.trim();
-  clearAuthMessages();
-  if (!username || !password) { showAuthMsg("error", "Please fill in all fields"); return; }
-  try {
-    const url  = authMode === "login" ? "/auth/login" : "/auth/register";
-    const res  = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({username, password}) });
-    const data = await res.json();
-    if (!res.ok || data.error) { showAuthMsg("error", data.error || "Error"); return; }
-    currentUser = data.username;
-    updateUserUI(data);
-    showAuthMsg("success", authMode === "login" ? `Welcome back, ${data.display_name || data.username}!` : `Account created! Welcome, ${data.display_name || data.username}!`);
-    setTimeout(closeAuth, 1400);
-    loadSession();
-  } catch(e) { showAuthMsg("error", "Connection error"); }
+function refreshInputs(obj){
+  if(!obj)return;const m=obj.mesh;
+  document.getElementById('px').value=+m.position.x.toFixed(2);
+  document.getElementById('py').value=+m.position.y.toFixed(2);
+  document.getElementById('pz').value=+m.position.z.toFixed(2);
+  const deg=Math.round(THREE.MathUtils.radToDeg(m.rotation.y)%360+360)%360;
+  document.getElementById('rot-sl').value=deg;document.getElementById('rot-v').textContent=deg+'°';
+  document.getElementById('sx').value=+m.scale.x.toFixed(2);
+  document.getElementById('sy').value=+m.scale.y.toFixed(2);
+  document.getElementById('sz').value=+m.scale.z.toFixed(2);
 }
-function showAuthMsg(type, msg) {
-  const el = document.getElementById(type === "error" ? "authError" : "authSuccess");
-  el.textContent = msg; el.style.display = "block";
+function showDims(obj){
+  const def=OBJ[obj.type||obj.mesh.userData.defKey];if(!def)return;
+  const wx=(def.w*obj.mesh.scale.x).toFixed(1);
+  const hy=(def.h*obj.mesh.scale.y).toFixed(1);
+  const dz=(def.d*obj.mesh.scale.z).toFixed(1);
+  const dd=document.getElementById('dim-disp');dd.style.display='block';
+  dd.textContent=`📐 ${wx}m × ${hy}m × ${dz}m`;
+  updDimLbl(obj);
 }
-async function logout() {
-  await fetch("/auth/logout", {method:"POST"});
-  currentUser = null;
-  document.getElementById("userArea").innerHTML = `<button class="header-btn login-btn" onclick="openAuth()">🔐 <span data-i18n="loginBtn">Login</span></button>`;
-  document.getElementById("usageBarWrap").classList.remove("show");
-  applyTranslations();
-  showToast("👋 Logged out");
+function updDimLbl(obj){
+  if(!obj||!selObj)return;
+  const def=OBJ[obj.type||obj.mesh.userData.defKey];if(!def)return;
+  const wx=(def.w*obj.mesh.scale.x).toFixed(1);const dz=(def.d*obj.mesh.scale.z).toFixed(1);
+  const pos=obj.mesh.position.clone();pos.y+=def.h*obj.mesh.scale.y/2+.3;
+  const pj=pos.project(camera);const r=wrap.getBoundingClientRect();
+  const lx=(pj.x*.5+.5)*r.width,ly=(-.5*pj.y+.5)*r.height;
+  const lbl=document.getElementById('dim-lbl');
+  if(pj.z<1){lbl.style.display='block';lbl.style.left=lx+'px';lbl.style.top=ly+'px';lbl.style.transform='translate(-50%,-100%)';lbl.textContent=`${wx}×${dz}m`}
+  else lbl.style.display='none';
+}
+function buildSwatches(obj){
+  const row=document.getElementById('c-sw');row.innerHTML='';
+  COLORS.forEach(hex=>{
+    const s=document.createElement('div');s.className='cs'+(hex===obj.mesh.userData.color?' a':'');
+    s.style.background='#'+hex.toString(16).padStart(6,'0');
+    s.onclick=()=>{obj.mesh.material.color.setHex(hex);obj.mesh.userData.color=hex;row.querySelectorAll('.cs').forEach(x=>x.classList.remove('a'));s.classList.add('a');pushH()};
+    row.appendChild(s);
+  });
+}
+function buildMatBtns(obj){
+  const row=document.getElementById('m-row');row.innerHTML='';
+  Object.keys(MATS).forEach(name=>{
+    const b=document.createElement('button');b.className='mb'+(obj.mesh.userData.mat===name?' a':'');b.textContent=name;
+    b.onclick=()=>{
+      const mp=MATS[name];obj.mesh.material.map=mp.map||null;obj.mesh.material.roughness=mp.roughness;obj.mesh.material.metalness=mp.metalness;obj.mesh.material.needsUpdate=true;
+      obj.mesh.userData.mat=name;row.querySelectorAll('.mb').forEach(x=>x.classList.remove('a'));b.classList.add('a');pushH();
+    };
+    row.appendChild(b);
+  });
+}
+function updPos(){if(!selObj)return;selObj.mesh.position.set(parseFloat(document.getElementById('px').value)||0,parseFloat(document.getElementById('py').value)||0,parseFloat(document.getElementById('pz').value)||0);updDimLbl(selObj)}
+function updRot(deg){
+  if(!selObj)return;const d=((parseFloat(deg)%360)+360)%360;
+  selObj.mesh.rotation.y=THREE.MathUtils.degToRad(d);
+  document.getElementById('rot-sl').value=d;document.getElementById('rot-v').textContent=Math.round(d)+'°';
+}
+function rotBy(delta){if(!selObj)return;updRot(Math.round(THREE.MathUtils.radToDeg(selObj.mesh.rotation.y))+delta);pushH()}
+function updScale(){
+  if(!selObj)return;
+  selObj.mesh.scale.set(Math.max(.05,parseFloat(document.getElementById('sx').value)||1),Math.max(.05,parseFloat(document.getElementById('sy').value)||1),Math.max(.05,parseFloat(document.getElementById('sz').value)||1));
+  showDims(selObj);
+}
+function delSel(){
+  if(!selObj)return;pushH();scene.remove(selObj.mesh);objs=objs.filter(o=>o!==selObj);
+  const wasLight=OBJ[selObj.type]?.isLight;deselCur();updateList();updateStats();if(wasLight)syncLights();pushH();
 }
 
-function updateUserUI(data) {
-  const area   = document.getElementById("userArea");
-  const name   = data.display_name || data.username || currentUser;
-  const avatar = data.avatar || "";
-  const avatarHtml = avatar
-    ? `<img class="user-avatar" src="${avatar}" alt="" onerror="this.style.display='none'" />`
-    : `<div class="user-avatar-placeholder">${name.charAt(0).toUpperCase()}</div>`;
-  area.innerHTML = `<div class="user-chip">${avatarHtml} ${name}</div><button class="header-btn" onclick="logout()">Logout</button>`;
+// ═══════════════════════════════════════════════
+// OBJECT LIST
+// ═══════════════════════════════════════════════
+function updateList(){
+  const list=document.getElementById('obj-list');list.innerHTML='';
+  objs.forEach(obj=>{
+    const el=document.createElement('div');
+    el.className='oli'+(selObj===obj?' sel':'')+(multiSel.includes(obj)?' ms':'');
+    el.dataset.id=obj.id;
+    el.innerHTML=`<span class="oli-i">${obj.mesh.userData.icon||'📦'}</span><span class="oli-n">${obj.mesh.userData.name}</span><span class="oli-d" onclick="event.stopPropagation();delById(${obj.id})">✕</span>`;
+    el.onclick=e=>{if(e.shiftKey){addToMulti(obj)}else{selectSingle(obj)}};
+    list.appendChild(el);
+  });
+}
+function delById(id){
+  const obj=objs.find(o=>o.id===id);if(!obj)return;
+  if(selObj===obj)deselCur();multiSel=multiSel.filter(o=>o!==obj);
+  pushH();scene.remove(obj.mesh);objs=objs.filter(o=>o.id!==id);
+  updateList();updateStats();refreshMultiUI();
+  if(OBJ[obj.type]?.isLight)syncLights();pushH();
+}
+function updateStats(){
+  document.getElementById('s-obj').textContent=objs.length;
+  document.getElementById('s-wal').textContent=objs.filter(o=>OBJ[o.type]?.isWall).length;
+  document.getElementById('s-lit').textContent=objs.filter(o=>OBJ[o.type]?.isLight).length;
+  // Area calc: bounding box of all wall positions
+  const walls=objs.filter(o=>OBJ[o.type]?.isWall);
+  if(walls.length>=2){
+    let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
+    walls.forEach(w=>{minX=Math.min(minX,w.mesh.position.x);maxX=Math.max(maxX,w.mesh.position.x);minZ=Math.min(minZ,w.mesh.position.z);maxZ=Math.max(maxZ,w.mesh.position.z)});
+    const area=((maxX-minX)*(maxZ-minZ)).toFixed(1);
+    document.getElementById('s-area').textContent=area;
+  } else {document.getElementById('s-area').textContent='0'}
 }
 
-async function loadSession() {
-  try {
-    const res  = await fetch("/auth/me");
-    const data = await res.json();
-    if (data.logged_in) {
-      currentUser = data.username;
-      updateUserUI(data);
-      updateUsageBar(data.used_today, data.limit_today, data.plan);
-      // Update Google button visibility
-      if (!data.google_configured) {
-        const wrap = document.getElementById("googleLoginWrap");
-        if (wrap) wrap.style.display = "none";
+// ═══════════════════════════════════════════════
+// CONTEXT MENU
+// ═══════════════════════════════════════════════
+let ctxObj=null;
+function showCtxMenu(e,obj){
+  e.preventDefault();ctxObj=obj;
+  const menu=document.getElementById('ctx-menu');
+  menu.style.display='block';
+  menu.style.left=Math.min(e.clientX,window.innerWidth-170)+'px';
+  menu.style.top=Math.min(e.clientY,window.innerHeight-200)+'px';
+}
+function hideCtxMenu(){document.getElementById('ctx-menu').style.display='none';ctxObj=null}
+document.addEventListener('click',e=>{if(!e.target.closest('#ctx-menu'))hideCtxMenu()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){hideCtxMenu();closeHelp();closeSettings();if(drawMode)toggleDraw()}});
+function ctxDuplicate(){if(ctxObj){selectSingle(ctxObj);duplicateSelected()}hideCtxMenu()}
+function ctxRotate90(){if(ctxObj){selectSingle(ctxObj);rotBy(90)}hideCtxMenu()}
+function ctxRotate180(){if(ctxObj){selectSingle(ctxObj);rotBy(180)}hideCtxMenu()}
+function ctxDelete(){if(ctxObj){selectSingle(ctxObj);delSel()}hideCtxMenu()}
+function ctxSendFront(){
+  if(!ctxObj)return;
+  const i=objs.indexOf(ctxObj);if(i<objs.length-1){objs.splice(i,1);objs.push(ctxObj);updateList()}hideCtxMenu();
+}
+function ctxSendBack(){
+  if(!ctxObj)return;
+  const i=objs.indexOf(ctxObj);if(i>0){objs.splice(i,1);objs.unshift(ctxObj);updateList()}hideCtxMenu();
+}
+
+// ═══════════════════════════════════════════════
+// MOUSE / ORBIT / DRAG
+// ═══════════════════════════════════════════════
+let orb={on:false,right:false,sx:0,sy:0};
+let camR=22,camTh=.8,camPh=.9,camTg=new THREE.Vector3();
+function updCam(){camera.position.set(camTg.x+camR*Math.sin(camPh)*Math.sin(camTh),camTg.y+camR*Math.cos(camPh),camTg.z+camR*Math.sin(camPh)*Math.cos(camTh));camera.lookAt(camTg)}
+updCam();
+let isDrag=false,dPlane=new THREE.Plane(),dOff=new THREE.Vector3(),dStart=new THREE.Vector3();
+let mDrag=false,mDStart=new THREE.Vector3(),mDOrigs=[];
+const pRay=new THREE.Raycaster(),m2=new THREE.Vector2();
+function ndc(e){const r=canvas.getBoundingClientRect();return{x:((e.clientX-r.left)/r.width)*2-1,y:-((e.clientY-r.top)/r.height)*2+1}}
+
+canvas.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  const nd=ndc(e);pRay.setFromCamera({x:nd.x,y:nd.y},camera);
+  const hits=pRay.intersectObjects(objs.map(o=>o.mesh),true);
+  if(hits.length){
+    let root=hits[0].object;while(root.parent&&root.parent!==scene)root=root.parent;
+    const obj=objs.find(o=>o.mesh===root);
+    if(obj){selectSingle(obj);showCtxMenu(e,obj);return}
+  }
+  hideCtxMenu();
+});
+
+canvas.addEventListener('mousedown',e=>{
+  if(document.getElementById('ctx-menu').style.display==='block')return;
+  // Draw mode
+  if(drawMode&&e.button===0){
+    const pt=getFloorPt(e);if(!pt)return;
+    if(drawPts.length>2){const f=drawPts[0],dx=pt.x-f.x,dz=pt.z-f.z;if(Math.sqrt(dx*dx+dz*dz)<1){toggleDraw();return}}
+    drawPts.push(pt);return;
+  }
+  const nd=ndc(e);pRay.setFromCamera({x:nd.x,y:nd.y},camera);
+  if(e.button===0){
+    // Multi-drag
+    if(multiSel.length>1){
+      const hits=pRay.intersectObjects(multiSel.map(o=>o.mesh),true);
+      if(hits.length){
+        mDrag=true;dPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0,1,0),multiSel[0].mesh.position);
+        const pt=new THREE.Vector3();pRay.ray.intersectPlane(dPlane,pt);mDStart.copy(pt);
+        mDOrigs=multiSel.map(o=>o.mesh.position.clone());canvas.style.cursor='grabbing';return;
       }
-      loadBadgeCounts();
     }
-  } catch(e) {}
+    // Single pick
+    const hits=pRay.intersectObjects(objs.map(o=>o.mesh),true);
+    if(hits.length){
+      let root=hits[0].object;while(root.parent&&root.parent!==scene)root=root.parent;
+      const obj=objs.find(o=>o.mesh===root);
+      if(obj){
+        if(e.shiftKey){addToMulti(obj);return}
+        selectSingle(obj);isDrag=true;
+        dPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0,1,0),obj.mesh.position);
+        const pt=new THREE.Vector3();pRay.ray.intersectPlane(dPlane,pt);dOff.subVectors(obj.mesh.position,pt);dStart.copy(obj.mesh.position);
+        canvas.style.cursor='grabbing';return;
+      }
+    }
+    if(!e.shiftKey){clearMulti();deselCur()}
+    orb={on:true,right:false,sx:e.clientX,sy:e.clientY};
+  } else if(e.button===2){
+    orb={on:true,right:true,sx:e.clientX,sy:e.clientY};
+  }
+});
+
+canvas.addEventListener('mousemove',e=>{
+  const dx=e.clientX-orb.sx,dy=e.clientY-orb.sy;
+  if(measMode){moveMeas(e);return}
+  if(isDrag&&selObj){
+    const nd=ndc(e);pRay.setFromCamera({x:nd.x,y:nd.y},camera);
+    const pt=new THREE.Vector3();
+    if(pRay.ray.intersectPlane(dPlane,pt)){selObj.mesh.position.x=sg(pt.x+dOff.x);selObj.mesh.position.z=sg(pt.z+dOff.z);refreshInputs(selObj);updDimLbl(selObj)}
+    return;
+  }
+  if(mDrag&&multiSel.length){
+    const nd=ndc(e);pRay.setFromCamera({x:nd.x,y:nd.y},camera);
+    const pt=new THREE.Vector3();
+    if(pRay.ray.intersectPlane(dPlane,pt)){
+      const ddx=sg(pt.x)-sg(mDStart.x),ddz=sg(pt.z)-sg(mDStart.z);
+      multiSel.forEach((obj,i)=>{obj.mesh.position.x=sg(mDOrigs[i].x+ddx);obj.mesh.position.z=sg(mDOrigs[i].z+ddz)});
+    }
+    return;
+  }
+  if(orb.on){
+    if(orb.right){
+      const spd=.012;const right=new THREE.Vector3();camera.getWorldDirection(right);
+      const up=new THREE.Vector3(0,1,0);right.crossVectors(right,up).normalize();
+      camTg.addScaledVector(right,-dx*spd);camTg.y-=dy*spd;
+    } else {camTh-=dx*.005;camPh=Math.max(.05,Math.min(Math.PI/2-.05,camPh+dy*.005))}
+    updCam();orb.sx=e.clientX;orb.sy=e.clientY;
+  }
+});
+
+canvas.addEventListener('mouseup',e=>{
+  if(isDrag&&selObj){if(!selObj.mesh.position.equals(dStart))pushH();isDrag=false;canvas.style.cursor='default'}
+  if(mDrag){mDrag=false;pushH();canvas.style.cursor='default'}
+  orb.on=false;
+});
+canvas.addEventListener('mouseleave',()=>{isDrag=false;mDrag=false;orb.on=false;canvas.style.cursor='default'});
+canvas.addEventListener('wheel',e=>{e.preventDefault();camR=Math.max(3,Math.min(60,camR+e.deltaY*.03));updCam()},{passive:false});
+canvas.addEventListener('dblclick',e=>{if(drawMode)toggleDraw()});
+
+// ── TOUCH SUPPORT ──
+let touches={},touchDist=0,touchMode='';
+canvas.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  const ts=[...e.touches];
+  if(ts.length===1){
+    const t=ts[0];touches.x=t.clientX;touches.y=t.clientY;touchMode='orbit';
+    // tap to select
+    const nd=ndc({clientX:t.clientX,clientY:t.clientY});pRay.setFromCamera({x:nd.x,y:nd.y},camera);
+    const hits=pRay.intersectObjects(objs.map(o=>o.mesh),true);
+    if(hits.length){let root=hits[0].object;while(root.parent&&root.parent!==scene)root=root.parent;const obj=objs.find(o=>o.mesh===root);if(obj){selectSingle(obj);touchMode='drag';dPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0,1,0),obj.mesh.position);const pt=new THREE.Vector3();pRay.ray.intersectPlane(dPlane,pt);dOff.subVectors(obj.mesh.position,pt);dStart.copy(obj.mesh.position);}}
+  } else if(ts.length===2){
+    touchMode='pinch';
+    const dx=ts[0].clientX-ts[1].clientX,dy=ts[0].clientY-ts[1].clientY;
+    touchDist=Math.sqrt(dx*dx+dy*dy);
+  }
+},{passive:false});
+
+canvas.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  const ts=[...e.touches];
+  if(ts.length===1&&touchMode==='orbit'){
+    const dx=ts[0].clientX-touches.x,dy=ts[0].clientY-touches.y;
+    camTh-=dx*.005;camPh=Math.max(.05,Math.min(Math.PI/2-.05,camPh+dy*.005));updCam();
+    touches.x=ts[0].clientX;touches.y=ts[0].clientY;
+  } else if(ts.length===1&&touchMode==='drag'&&selObj){
+    const nd=ndc({clientX:ts[0].clientX,clientY:ts[0].clientY});pRay.setFromCamera({x:nd.x,y:nd.y},camera);
+    const pt=new THREE.Vector3();if(pRay.ray.intersectPlane(dPlane,pt)){selObj.mesh.position.x=sg(pt.x+dOff.x);selObj.mesh.position.z=sg(pt.z+dOff.z);refreshInputs(selObj)}
+  } else if(ts.length===2&&touchMode==='pinch'){
+    const dx=ts[0].clientX-ts[1].clientX,dy=ts[0].clientY-ts[1].clientY;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    camR=Math.max(3,Math.min(60,camR-(dist-touchDist)*.05));updCam();touchDist=dist;
+  }
+},{passive:false});
+
+canvas.addEventListener('touchend',e=>{
+  if(touchMode==='drag'&&selObj&&!selObj.mesh.position.equals(dStart))pushH();
+  touchMode='';
+},{passive:false});
+
+// ═══════════════════════════════════════════════
+// MEASURE TOOL
+// ═══════════════════════════════════════════════
+let measMode=false,measPt1=null,measLine=null;
+const measRay=new THREE.Raycaster();
+function toggleMeasure(){
+  measMode=!measMode;
+  document.getElementById('meas-btn').classList.toggle('ow',measMode);
+  const ov=document.getElementById('meas-ov'),lbl=document.getElementById('meas-lbl');
+  if(!measMode){ov.style.display='none';lbl.style.display='none';measPt1=null;if(measLine){scene.remove(measLine);measLine=null};showToast('📏 Measure OFF')}
+  else{ov.style.display='block';measPt1=null;showToast('📏 Click 2 floor points to measure','warn')}
+}
+document.getElementById('meas-ov').addEventListener('click',e=>{
+  const r=canvas.getBoundingClientRect();
+  measRay.setFromCamera({x:((e.clientX-r.left)/r.width)*2-1,y:-((e.clientY-r.top)/r.height)*2+1},camera);
+  const pt=new THREE.Vector3();if(!measRay.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),pt))return;
+  if(!measPt1){measPt1=pt.clone();showToast('📏 First point set — click second')}
+  else{
+    const dist=measPt1.distanceTo(pt).toFixed(2);
+    if(measLine)scene.remove(measLine);
+    const pts=[measPt1.clone(),pt.clone()];pts[0].y=pts[1].y=.05;
+    measLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xf0c040}));
+    scene.add(measLine);
+    const mid=measPt1.clone().add(pt).multiplyScalar(.5),pj=mid.project(camera),wr=wrap.getBoundingClientRect();
+    const lbl=document.getElementById('meas-lbl');lbl.style.display='block';
+    lbl.style.left=(pj.x*.5+.5)*wr.width+'px';lbl.style.top=(-.5*pj.y+.5)*wr.height+'px';
+    lbl.style.transform='translate(-50%,-100%)';lbl.textContent=`📏 ${dist} m`;
+    showToast(`📏 ${dist} m`,'success');measPt1=null;
+  }
+});
+function moveMeas(e){
+  if(!measPt1)return;
+  const r=wrap.getBoundingClientRect();
+  const lbl=document.getElementById('meas-lbl');lbl.style.display='block';
+  measRay.setFromCamera({x:((e.clientX-r.left)/r.width)*2-1,y:-((e.clientY-r.top)/r.height)*2+1},camera);
+  const pt=new THREE.Vector3();if(!measRay.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),pt))return;
+  lbl.style.left=e.clientX-r.left+'px';lbl.style.top=e.clientY-r.top-28+'px';lbl.style.transform='translate(-50%,0)';
+  lbl.textContent=`📏 ${measPt1.distanceTo(pt).toFixed(2)} m`;
 }
 
 // ═══════════════════════════════════════════════
-// Tabs
+// CAMERA
 // ═══════════════════════════════════════════════
-function switchTab(name, btn) {
-  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-  document.getElementById("tab-" + name).classList.add("active");
-  if (btn) btn.classList.add("active");
-  if (name === "history")   loadHistory();
-  if (name === "favorites") loadFavorites();
-  if (name === "downloads") loadDownloads();
-  if (name === "profile")   loadProfile();
+function resetCam(){camTh=.8;camPh=.9;camR=22;camTg.set(0,0,0);updCam()}
+function zoomIn(){camR=Math.max(3,camR-2);updCam()}
+function zoomOut(){camR=Math.min(60,camR+2);updCam()}
+function setView(v){
+  document.querySelectorAll('.vbt').forEach(b=>b.classList.remove('a'));
+  document.getElementById('vb-'+v[0])?.classList.add('a');
+  if(v==='perspective'){camTh=.8;camPh=.9;camR=22}
+  else if(v==='top'){camTh=0;camPh=.01;camR=20}
+  else if(v==='front'){camTh=0;camPh=Math.PI/2-.05;camR=20}
+  else if(v==='side'){camTh=Math.PI/2;camPh=Math.PI/2-.05;camR=20}
+  updCam();
 }
 
 // ═══════════════════════════════════════════════
-// Style / Size
+// KEYBOARD
 // ═══════════════════════════════════════════════
-function selectStyle(el) {
-  document.querySelectorAll(".style-card").forEach(c => c.classList.remove("active"));
-  el.classList.add("active"); selectedStyle = el.dataset.style;
-}
-function selectSize(el) {
-  document.querySelectorAll(".size-card").forEach(c => c.classList.remove("active"));
-  el.classList.add("active"); selectedSize = el.dataset.size;
-}
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+  if(e.key==='Delete'||e.key==='Backspace'){if(multiSel.length>1)delMulti();else delSel()}
+  if(e.key==='g'||e.key==='G')toggleSnap();
+  if(e.key==='m'||e.key==='M')toggleMeasure();
+  if(e.key==='Escape'&&drawMode)toggleDraw();
+  if(e.ctrlKey&&e.key==='z'){e.preventDefault();undo()}
+  if(e.ctrlKey&&(e.key==='y'||e.key==='Y')){e.preventDefault();redo()}
+  if(e.ctrlKey&&e.key==='s'){e.preventDefault();saveProject()}
+  if(e.ctrlKey&&e.key==='d'){e.preventDefault();duplicateSelected()}
+  if(selObj){
+    const step=snapOn?snapSz:.1;
+    if(e.key==='ArrowLeft'){selObj.mesh.position.x-=step;refreshInputs(selObj);e.preventDefault()}
+    if(e.key==='ArrowRight'){selObj.mesh.position.x+=step;refreshInputs(selObj);e.preventDefault()}
+    if(e.key==='ArrowUp'){selObj.mesh.position.z-=step;refreshInputs(selObj);e.preventDefault()}
+    if(e.key==='ArrowDown'){selObj.mesh.position.z+=step;refreshInputs(selObj);e.preventDefault()}
+  }
+});
 
 // ═══════════════════════════════════════════════
-// Prompt helpers
+// SAVE / LOAD
 // ═══════════════════════════════════════════════
-function updateCharCount() { document.getElementById("charCount").textContent = document.getElementById("prompt").value.length; }
-document.getElementById("prompt").addEventListener("input", () => { updateCharCount(); scheduleAutocomplete(); });
-async function getRandomPrompt() {
-  try {
-    const d = await (await fetch(`/random-prompt?lang=${currentLang}`)).json();
-    document.getElementById("prompt").value = d.prompt; updateCharCount(); showToast("🎲 Random prompt!");
-  } catch(e) {}
-}
-function copyPrompt() {
-  const t = document.getElementById("prompt").value.trim();
-  if (t) navigator.clipboard.writeText(t).then(() => showToast("📋 Copied!"));
-}
-function copyResultPrompt() {
-  if (currentResult) navigator.clipboard.writeText(currentResult.original_prompt).then(() => showToast("📋 Prompt copied!"));
-}
-function clearPrompt() { document.getElementById("prompt").value = ""; updateCharCount(); hideAutocomplete(); }
-
-// ═══════════════════════════════════════════════
-// Autocomplete
-// ═══════════════════════════════════════════════
-function scheduleAutocomplete() { clearTimeout(acTimer); acTimer = setTimeout(fetchSuggestions, 300); }
-async function fetchSuggestions() {
-  const last = document.getElementById("prompt").value.split(/[,.]/).pop().trim();
-  if (last.length < 2) { hideAutocomplete(); return; }
-  try {
-    const d = await (await fetch(`/suggestions?q=${encodeURIComponent(last)}`)).json();
-    showAutocomplete(d.suggestions);
-  } catch(e) { hideAutocomplete(); }
-}
-function showAutocomplete(list) {
-  const box = document.getElementById("autocompleteBox");
-  if (!list.length) { hideAutocomplete(); return; }
-  box.innerHTML = list.map(s => `<div class="autocomplete-item" onclick="applyAutocomplete('${s.replace(/'/g,"\\'")}')"><span style="color:var(--accent2);font-size:.68rem">✦</span>${s}</div>`).join("");
-  box.style.display = "block";
-}
-function hideAutocomplete() { document.getElementById("autocompleteBox").style.display = "none"; }
-function applyAutocomplete(s) {
-  const el = document.getElementById("prompt");
-  const parts = el.value.split(/([,.])/);
-  parts[parts.length-1] = " " + s;
-  el.value = parts.join("").replace(/^\s+/,"");
-  updateCharCount(); hideAutocomplete(); el.focus();
-}
-document.addEventListener("click", e => { if (!e.target.closest(".prompt-row")) hideAutocomplete(); });
-
-// ═══════════════════════════════════════════════
-// Spinner
-// ═══════════════════════════════════════════════
-function animateSteps() {
-  const ids = ["step1","step2","step3"]; let i = 0;
-  ids.forEach(id => document.getElementById(id).className = "step");
-  document.getElementById(ids[0]).classList.add("active");
-  stepTimer = setInterval(() => {
-    if (i < ids.length-1) { document.getElementById(ids[i]).classList.replace("active","done"); document.getElementById(ids[++i]).classList.add("active"); }
-  }, 2500);
-}
-function stopSteps() { clearInterval(stepTimer); ["step1","step2","step3"].forEach(id => document.getElementById(id).className="step"); }
-
-// ═══════════════════════════════════════════════
-// Generate
-// ═══════════════════════════════════════════════
-async function generate() {
-  const prompt   = document.getElementById("prompt").value.trim();
-  const negative = document.getElementById("negative").value.trim();
-  if (!prompt) return;
-
-  const btn = document.getElementById("generateBtn");
-  btn.disabled = true; hideAutocomplete();
-
-  ["placeholder","resultImage","imageMeta","imageActions","featureActions","errorBox","translationBadge"]
-    .forEach(id => document.getElementById(id).style.display = "none");
-  document.querySelectorAll(".feature-panel").forEach(p => p.classList.remove("show"));
-  activeFeature = null;
-  document.querySelectorAll("#featureActions .action-btn").forEach(b => b.classList.remove("active-feature"));
-  document.getElementById("spinner").style.display = "flex";
-  animateSteps();
-
-  try {
-    const res  = await fetch("/generate", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({prompt, style:selectedStyle, size:selectedSize, negative})
+const SK='shd_v3';
+function getJSON(){return JSON.stringify({version:3,floor:curFloor,objects:objs.map(o=>({id:o.id,type:o.type,px:o.mesh.position.x,py:o.mesh.position.y,pz:o.mesh.position.z,rx:o.mesh.rotation.x,ry:o.mesh.rotation.y,rz:o.mesh.rotation.z,sx:o.mesh.scale.x,sy:o.mesh.scale.y,sz:o.mesh.scale.z,color:o.mesh.userData.color,mat:o.mesh.userData.mat||'Default'}))},null,2)}
+function loadJSON(str){
+  try{
+    const d=JSON.parse(str);
+    objs.forEach(o=>scene.remove(o.mesh));objs=[];selObj=null;multiSel=[];objCnt=0;
+    if(d.floor)setFloor(d.floor);
+    (d.objects||[]).forEach(item=>{
+      const def=OBJ[item.type];if(!def)return;
+      const mesh=buildMesh(def,item.color,item.mat||'Default');
+      mesh.position.set(item.px||0,item.py||0,item.pz||0);
+      mesh.rotation.set(item.rx||0,item.ry||0,item.rz||0);
+      mesh.scale.set(item.sx||1,item.sy||1,item.sz||1);
+      mesh.userData.type=item.type;mesh.userData.name=def.name;mesh.userData.icon=def.icon;mesh.userData.defKey=item.type;
+      scene.add(mesh);objs.push({id:item.id,type:item.type,mesh});if(item.id>=objCnt)objCnt=item.id+1;
     });
-    const data = await res.json();
-    stopSteps(); document.getElementById("spinner").style.display = "none";
+    updateList();updateStats();hideProps();hist=[];hIdx=-1;pushH();syncLights();return true;
+  }catch(err){console.error(err);return false}
+}
+function saveProject(){try{localStorage.setItem(SK,getJSON());showToast('💾 Saved!','success')}catch{showToast('Save failed','error')}}
+function loadProject(){const r=localStorage.getItem(SK);if(!r){showToast('No save found','error');return}loadJSON(r)?showToast('📂 Loaded!','success'):showToast('Load error','error')}
+function exportJSON(){const b=new Blob([getJSON()],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='smart-home.json';a.click();URL.revokeObjectURL(a.href);showToast('⬇ Exported','success')}
+function importJSON(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{loadJSON(ev.target.result)?showToast('⬆ Imported!','success'):showToast('Invalid JSON','error')};r.readAsText(f);e.target.value=''}
 
-    if (!res.ok || data.error) {
-      document.getElementById("errorBox").textContent = data.error || "Unknown error";
-      document.getElementById("errorBox").style.display = "block";
-      return;
-    }
+// ═══════════════════════════════════════════════
+// FLOOR PLAN
+// ═══════════════════════════════════════════════
+function openFP(){
+  const W=800,H=600,PAD=40,sc=20,cx=W/2,cy=H/2;
+  const fc=document.getElementById('fp-cv');fc.width=W;fc.height=H;
+  const ctx=fc.getContext('2d');
+  ctx.fillStyle='#1a1e2e';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(80,100,140,.3)';ctx.lineWidth=.5;
+  for(let i=-15;i<=15;i++){ctx.beginPath();ctx.moveTo(cx+i*sc,PAD);ctx.lineTo(cx+i*sc,H-PAD);ctx.stroke();ctx.beginPath();ctx.moveTo(PAD,cy+i*sc);ctx.lineTo(W-PAD,cy+i*sc);ctx.stroke()}
+  ctx.fillStyle='rgba(140,150,180,.5)';ctx.font='8px monospace';ctx.textAlign='center';
+  for(let i=-14;i<=14;i+=2){ctx.fillText(i+'m',cx+i*sc,H-PAD+11);ctx.fillText(i+'m',PAD-10,cy-i*sc+3)}
+  objs.forEach(obj=>{
+    const def=OBJ[obj.type];if(!def)return;const m=obj.mesh;
+    const ox=cx+m.position.x*sc,oy=cy-m.position.z*sc;
+    const hw=(def.w*m.scale.x*sc)/2,hd=(def.d*m.scale.z*sc)/2;
+    const col='#'+obj.mesh.userData.color.toString(16).padStart(6,'0');
+    ctx.save();ctx.translate(ox,oy);ctx.rotate(-m.rotation.y);
+    ctx.fillStyle=col+'cc';ctx.strokeStyle=col;ctx.lineWidth=1.5;
+    ctx.fillRect(-hw,-hd,hw*2,hd*2);ctx.strokeRect(-hw,-hd,hw*2,hd*2);
+    ctx.fillStyle='rgba(255,255,255,.85)';ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.fillText(def.name,0,0);
+    ctx.fillStyle='rgba(240,192,64,.9)';ctx.font='7px monospace';
+    ctx.fillText(`${(def.w*m.scale.x).toFixed(1)}×${(def.d*m.scale.z).toFixed(1)}m`,0,9);
+    ctx.restore();
+  });
+  ctx.fillStyle='rgba(240,240,255,.7)';ctx.font='bold 12px sans-serif';ctx.textAlign='left';
+  ctx.fillText('Smart Home — Floor Plan',PAD,18);
+  ctx.fillStyle='rgba(140,150,180,.6)';ctx.font='9px monospace';
+  ctx.fillText(`Objects: ${objs.length}  |  1 square = 1m²`,PAD,30);
+  document.getElementById('fp-modal').classList.add('open');
+}
+function closeFP(){document.getElementById('fp-modal').classList.remove('open')}
+function dlFP(){const a=document.createElement('a');a.href=document.getElementById('fp-cv').toDataURL('image/png');a.download='floor-plan.png';a.click();showToast('📐 Floor plan saved!','success')}
 
-    currentResult = data;
-
-    if (data.was_translated) {
-      const lm = {Russian:"🇷🇺 Russian", Uzbek:"🇺🇿 Uzbek"};
-      document.getElementById("badgeLangLabel").textContent = "Detected: " + (lm[data.detected_language]||data.detected_language);
-      document.getElementById("badgePrompt").textContent = `"${data.expanded_prompt}"`;
-      document.getElementById("translationBadge").style.display = "block";
-    }
-
-    const img = document.getElementById("resultImage");
-    img.src = data.image_url; img.style.display = "block";
-    updateFavBtn(data.is_favorite || false);
-    document.getElementById("metaStyle").textContent = data.style;
-    document.getElementById("metaSize").textContent  = data.size;
-    document.getElementById("metaLang").textContent  = data.detected_language || "English";
-    document.getElementById("imageMeta").style.display    = "grid";
-    document.getElementById("imageActions").style.display = "flex";
-    document.getElementById("featureActions").style.display = "flex";
-
-    // Update usage bar
-    updateUsageBar(data.used_today, data.limit_today, currentUser ? "free" : "free");
-
-    // Refresh history badge immediately after generating
-    loadBadgeCounts();
-
-  } catch(e) {
-    stopSteps(); document.getElementById("spinner").style.display = "none";
-    document.getElementById("errorBox").textContent = "Connection error: " + e.message;
-    document.getElementById("errorBox").style.display = "block";
-  } finally { btn.disabled = false; }
+// ═══════════════════════════════════════════════
+// PRESETS
+// ═══════════════════════════════════════════════
+const PRESETS={
+  bedroom:[
+    {type:'wall-h',px:0,py:1.4,pz:-5,ry:0},{type:'wall-h',px:0,py:1.4,pz:5,ry:0},
+    {type:'wall-v',px:-5,py:1.4,pz:0,ry:0},{type:'wall-v',px:5,py:1.4,pz:0,ry:0},
+    {type:'bed',px:0,py:.25,pz:-2.5,ry:0},{type:'wardrobe',px:3.5,py:1,pz:-3,ry:0},
+    {type:'desk',px:-3.5,py:.375,pz:0,ry:1.5708},{type:'plant',px:-3.5,py:.5,pz:-3.5,ry:0},
+    {type:'curtain',px:-4.8,py:1.2,pz:-2,ry:1.5708},{type:'ceiling-light',px:0,py:2.85,pz:0,ry:0},
+  ],
+  living:[
+    {type:'wall-h',px:0,py:1.4,pz:-5,ry:0},{type:'wall-h',px:0,py:1.4,pz:5,ry:0},
+    {type:'wall-v',px:-5,py:1.4,pz:0,ry:0},{type:'wall-v',px:5,py:1.4,pz:0,ry:0},
+    {type:'sofa',px:0,py:.4,pz:-1,ry:0},{type:'table',px:0,py:.375,pz:1.5,ry:0},
+    {type:'tv',px:0,py:.45,pz:-4.5,ry:0},{type:'rug',px:0,py:.025,pz:0,ry:0},
+    {type:'plant',px:3.5,py:.5,pz:-3.5,ry:0},{type:'ceiling-fan',px:0,py:2.9,pz:0,ry:0},
+  ],
+  kitchen:[
+    {type:'wall-h',px:0,py:1.4,pz:-5,ry:0},{type:'wall-v',px:-5,py:1.4,pz:0,ry:0},{type:'wall-v',px:5,py:1.4,pz:0,ry:0},
+    {type:'kitchen-counter',px:-3,py:.45,pz:-4,ry:0},{type:'kitchen-counter',px:1,py:.45,pz:-4,ry:0},
+    {type:'fridge',px:-4.5,py:.9,pz:-4,ry:0},{type:'dishwasher',px:2.5,py:.425,pz:-4,ry:0},
+    {type:'sink',px:-3,py:.425,pz:-3,ry:0},{type:'dining-set',px:1,py:.375,pz:1.5,ry:0},
+  ],
+  office:[
+    {type:'wall-h',px:0,py:1.4,pz:-4,ry:0},{type:'wall-v',px:-4,py:1.4,pz:0,ry:0},{type:'wall-v',px:4,py:1.4,pz:0,ry:0},
+    {type:'desk',px:0,py:.375,pz:-2,ry:0},{type:'chair',px:0,py:.425,pz:-1,ry:3.1416},
+    {type:'bookshelf',px:3,py:1,pz:-2,ry:0},{type:'plant',px:-3,py:.5,pz:-3,ry:0},
+    {type:'ceiling-light',px:0,py:2.85,pz:0,ry:0},
+  ],
+  bathroom:[
+    {type:'wall-h',px:0,py:1.4,pz:-4,ry:0},{type:'wall-h',px:0,py:1.4,pz:4,ry:0},
+    {type:'wall-v',px:-3,py:1.4,pz:0,ry:0},{type:'wall-v',px:3,py:1.4,pz:0,ry:0},
+    {type:'bathtub',px:-1,py:.25,pz:-2,ry:0},{type:'shower',px:2,py:1.05,pz:-2.5,ry:0},
+    {type:'toilet',px:2,py:.35,pz:-3,ry:0},{type:'sink',px:-2,py:.425,pz:0,ry:0},
+  ],
+  studio:[
+    {type:'wall-h',px:0,py:1.4,pz:-6,ry:0},{type:'wall-h',px:0,py:1.4,pz:6,ry:0},
+    {type:'wall-v',px:-6,py:1.4,pz:0,ry:0},{type:'wall-v',px:6,py:1.4,pz:0,ry:0},
+    {type:'sofa',px:-2,py:.4,pz:2,ry:1.5708},{type:'bed',px:3,py:.25,pz:-3,ry:0},
+    {type:'desk',px:-4,py:.375,pz:-3,ry:1.5708},{type:'kitchen-counter',px:1,py:.45,pz:-5,ry:0},
+    {type:'fridge',px:2.8,py:.9,pz:-5,ry:0},{type:'washer',px:-4.8,py:.425,pz:2,ry:0},
+    {type:'plant',px:5,py:.5,pz:4,ry:0},{type:'ceiling-fan',px:0,py:2.9,pz:0,ry:0},
+  ],
+};
+function loadPreset(name){
+  const pr=PRESETS[name];if(!pr)return;
+  objs.forEach(o=>scene.remove(o.mesh));objs=[];selObj=null;multiSel=[];objCnt=0;hideProps();
+  pr.forEach(item=>{
+    const def=OBJ[item.type];if(!def)return;
+    const mesh=buildMesh(def,undefined,'Default');
+    mesh.position.set(item.px||0,item.py||0,item.pz||0);mesh.rotation.y=item.ry||0;
+    mesh.userData.type=item.type;mesh.userData.name=def.name;mesh.userData.icon=def.icon;mesh.userData.defKey=item.type;
+    scene.add(mesh);objs.push({id:objCnt++,type:item.type,mesh});
+  });
+  updateList();updateStats();hist=[];hIdx=-1;pushH();syncLights();
+  showToast('🏠 '+name[0].toUpperCase()+name.slice(1)+' loaded!','success');
+}
+function clearScene(){
+  if(!objs.length)return;pushH();
+  objs.forEach(o=>scene.remove(o.mesh));objs=[];selObj=null;multiSel=[];
+  hideProps();updateList();updateStats();refreshMultiUI();syncLights();pushH();
+  showToast('🗑 Cleared');
 }
 
 // ═══════════════════════════════════════════════
-// Feature panels
+// SCREENSHOT
 // ═══════════════════════════════════════════════
-function toggleFeature(name) {
-  const panel = document.getElementById("panel-" + name);
-  const btnId = "btn" + name.charAt(0).toUpperCase() + name.slice(1);
-  const btn   = document.getElementById(btnId);
-  if (activeFeature === name) {
-    panel.classList.remove("show"); btn.classList.remove("active-feature"); activeFeature = null;
-  } else {
-    document.querySelectorAll(".feature-panel").forEach(p => p.classList.remove("show"));
-    document.querySelectorAll("#featureActions .action-btn").forEach(b => b.classList.remove("active-feature"));
-    panel.classList.add("show"); btn.classList.add("active-feature"); activeFeature = name;
+function screenshotScene(){renderer.render(scene,camera);const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download='smart-home.png';a.click();showToast('📸 Screenshot saved!','success')}
+
+// ═══════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════
+let tT=null;
+function showToast(msg,type){
+  const el=document.getElementById('toast');el.textContent=msg;
+  el.className='show'+(type?{success:' ts',error:' te',warn:' tw'}[type]||'':'');
+  clearTimeout(tT);tT=setTimeout(()=>el.className='',2400);
+}
+
+// ═══════════════════════════════════════════════
+// AI — ADVISOR + AUTO-PLACE
+// ═══════════════════════════════════════════════
+// Auto-place command map
+const AI_PLACE={
+  bedroom:[
+    {type:'wall-h',px:0,py:1.4,pz:-5,ry:0},{type:'wall-h',px:0,py:1.4,pz:5,ry:0},
+    {type:'wall-v',px:-5,py:1.4,pz:0,ry:0},{type:'wall-v',px:5,py:1.4,pz:0,ry:0},
+    {type:'bed',px:0,py:.25,pz:-2.5,ry:0},{type:'wardrobe',px:3.5,py:1,pz:-3,ry:0},
+    {type:'desk',px:-3.5,py:.375,pz:0,ry:1.5708},{type:'curtain',px:-4.8,py:1.2,pz:-2,ry:1.5708},
+    {type:'ceiling-light',px:0,py:2.85,pz:0,ry:0},{type:'plant',px:3.5,py:.5,pz:3,ry:0},
+  ],
+  living:[
+    {type:'sofa',px:0,py:.4,pz:0,ry:0},{type:'table',px:0,py:.375,pz:1.8,ry:0},
+    {type:'tv',px:0,py:.45,pz:-3,ry:0},{type:'rug',px:0,py:.025,pz:.5,ry:0},
+    {type:'plant',px:3,py:.5,pz:-2,ry:0},{type:'ceiling-fan',px:0,py:2.9,pz:0,ry:0},
+  ],
+  office:[
+    {type:'desk',px:0,py:.375,pz:-1,ry:0},{type:'chair',px:0,py:.425,pz:.5,ry:3.1416},
+    {type:'bookshelf',px:2.5,py:1,pz:0,ry:0},{type:'plant',px:-2.5,py:.5,pz:-2,ry:0},
+    {type:'ceiling-light',px:0,py:2.85,pz:0,ry:0},
+  ],
+  kitchen:[
+    {type:'kitchen-counter',px:-2,py:.45,pz:-3,ry:0},{type:'fridge',px:-3.5,py:.9,pz:-3,ry:0},
+    {type:'sink',px:-2,py:.425,pz:-2,ry:0},{type:'dining-set',px:1.5,py:.375,pz:.5,ry:0},
+  ],
+  bathroom:[
+    {type:'bathtub',px:-1,py:.25,pz:-1.5,ry:0},{type:'shower',px:1.5,py:1.05,pz:-1.5,ry:0},
+    {type:'toilet',px:1.5,py:.35,pz:-2.5,ry:0},{type:'sink',px:-1.5,py:.425,pz:.5,ry:0},
+  ],
+};
+
+function detectAutoPlace(msg){
+  const m=msg.toLowerCase();
+  if(m.includes('bedroom')||m.includes('bed room'))return'bedroom';
+  if(m.includes('living')||m.includes('lounge'))return'living';
+  if(m.includes('office')||m.includes('work'))return'office';
+  if(m.includes('kitchen'))return'kitchen';
+  if(m.includes('bathroom')||m.includes('bath room'))return'bathroom';
+  return null;
+}
+function autoPlace(roomKey){
+  const items=AI_PLACE[roomKey];if(!items)return false;
+  objs.forEach(o=>scene.remove(o.mesh));objs=[];selObj=null;multiSel=[];objCnt=0;hideProps();
+  items.forEach(item=>{
+    const def=OBJ[item.type];if(!def)return;
+    const mesh=buildMesh(def,undefined,'Default');
+    mesh.position.set(item.px||0,item.py||0,item.pz||0);mesh.rotation.y=item.ry||0;
+    mesh.userData.type=item.type;mesh.userData.name=def.name;mesh.userData.icon=def.icon;mesh.userData.defKey=item.type;
+    scene.add(mesh);objs.push({id:objCnt++,type:item.type,mesh});
+  });
+  updateList();updateStats();hist=[];hIdx=-1;pushH();syncLights();
+  showToast('🤖 AI placed '+roomKey+' furniture!','success');
+  return true;
+}
+
+async function sendAI(){
+  const inp=document.getElementById('ai-in');
+  const msg=inp.value.trim();if(!msg)return;inp.value='';
+  const box=document.getElementById('aim');
+  box.innerHTML+=`<div class="am u">You: ${msg}</div>`;
+  // Auto-place detection (no API key needed)
+  const room=detectAutoPlace(msg);
+  if(room&&(msg.toLowerCase().includes('set up')||msg.toLowerCase().includes('add')||msg.toLowerCase().includes('place')||msg.toLowerCase().includes('create')||msg.toLowerCase().includes('setup'))){
+    const done=autoPlace(room);
+    if(done){box.innerHTML+=`<div class="am ai">🤖 Done! I've placed a complete ${room} layout for you. You can move, rotate, and resize any object using the properties panel. Ask me for design tips!</div>`;box.scrollTop=box.scrollHeight;return}
   }
-}
-
-// ═══════════════════════════════════════════════
-// Variations
-// ═══════════════════════════════════════════════
-async function generateVariations() {
-  if (!currentResult) return;
-  const btn = document.getElementById("varBtn2"), count = parseInt(document.getElementById("varCount").value);
-  btn.disabled = true; btn.innerHTML = `<span class="mini-spinner"></span> Generating...`;
-  document.getElementById("variationsResult").innerHTML = `<p style="color:var(--muted);font-size:.79rem;margin-top:8px">Generating ${count} variations...</p>`;
-  try {
-    const res = await fetch("/variation", { method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({prompt:currentResult.prompt, style_key:currentResult.style_key, size_key:currentResult.size_key, count}) });
-    const d = await res.json();
-    if (d.error) { document.getElementById("variationsResult").innerHTML = `<p style="color:var(--red)">${d.error}</p>`; return; }
-    document.getElementById("variationsResult").innerHTML = `<div class="variations-grid">${
-      d.variations.map(v => v.error
-        ? `<div style="color:var(--red);font-size:.75rem;padding:8px">Error: ${v.error}</div>`
-        : `<div class="variation-card"><img src="${v.image_url}" loading="lazy"/><div class="variation-card-footer"><span>Var ${v.index}</span><button class="var-dl" onclick="window.location.href='/download/${v.filename}'">⬇ Save</button></div></div>`
-      ).join("")}</div>`;
-    showToast(`✅ ${d.count} variations done!`);
-  } catch(e) { document.getElementById("variationsResult").innerHTML = `<p style="color:var(--red)">Error: ${e.message}</p>`; }
-  finally { btn.disabled = false; btn.innerHTML = "🔁 Generate"; }
-}
-
-// ═══════════════════════════════════════════════
-// Compare
-// ═══════════════════════════════════════════════
-async function generateCompare() {
-  if (!currentResult) return;
-  const btn = document.getElementById("cmpBtn2");
-  btn.disabled = true; btn.innerHTML = `<span class="mini-spinner"></span> Comparing...`;
-  document.getElementById("compareResult").innerHTML = `<p style="color:var(--muted);font-size:.79rem;margin-top:8px">Generating comparison...</p>`;
-  try {
-    const res = await fetch("/compare", { method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({prompt:currentResult.expanded_prompt, style_a:document.getElementById("styleA").value, style_b:document.getElementById("styleB").value, size_key:currentResult.size_key}) });
-    const d = await res.json();
-    if (d.error) { document.getElementById("compareResult").innerHTML = `<p style="color:var(--red)">${d.error}</p>`; return; }
-    const ca = d.compare.a, cb = d.compare.b;
-    document.getElementById("compareResult").innerHTML = `<div class="compare-grid">
-      <div class="compare-card"><img src="${ca.image_url||''}" loading="lazy"/><div class="compare-card-label"><span>🅰 ${ca.style||''}</span><button class="var-dl" onclick="window.location.href='/download/${ca.filename||''}'">⬇</button></div></div>
-      <div class="compare-card"><img src="${cb.image_url||''}" loading="lazy"/><div class="compare-card-label"><span>🅱 ${cb.style||''}</span><button class="var-dl" onclick="window.location.href='/download/${cb.filename||''}'">⬇</button></div></div>
-    </div>`;
-    showToast("⚖️ Comparison ready!");
-  } catch(e) { document.getElementById("compareResult").innerHTML = `<p style="color:var(--red)">Error: ${e.message}</p>`; }
-  finally { btn.disabled = false; btn.innerHTML = "⚖️ Compare"; }
-}
-
-// ═══════════════════════════════════════════════
-// Upscale
-// ═══════════════════════════════════════════════
-async function upscaleImage() {
-  if (!currentResult) return;
-  const btn = document.getElementById("upscaleBtn2"), scale = parseInt(document.getElementById("scaleSelect").value);
-  btn.disabled = true; btn.innerHTML = `<span class="mini-spinner"></span> Upscaling...`;
-  document.getElementById("upscaleResult").innerHTML = `<p style="color:var(--muted);font-size:.79rem;margin-top:8px">Upscaling ${scale}x...</p>`;
-  try {
-    const res = await fetch("/upscale", { method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({filename:currentResult.filename, scale}) });
-    const d = await res.json();
-    if (d.error) { document.getElementById("upscaleResult").innerHTML = `<p style="color:var(--red)">${d.error}</p>`; return; }
-    document.getElementById("upscaleResult").innerHTML = `<div class="process-result">
-      <img src="${currentResult.image_url}"/>
-      <div class="process-result-info"><span>📐 ${d.original_size} → <strong style="color:var(--green)">${d.new_size}</strong></span>
-      <button class="feature-btn" style="padding:5px 11px;font-size:.75rem" onclick="window.location.href='${d.download_url}'">⬇ ${scale}x</button></div>
-    </div>`;
-    showToast(`✅ Upscaled to ${d.new_size}!`);
-  } catch(e) { document.getElementById("upscaleResult").innerHTML = `<p style="color:var(--red)">Error: ${e.message}</p>`; }
-  finally { btn.disabled = false; btn.innerHTML = "🔍 Upscale"; }
-}
-
-// ═══════════════════════════════════════════════
-// Watermark
-// ═══════════════════════════════════════════════
-async function addWatermark() {
-  if (!currentResult) return;
-  const btn = document.getElementById("wmBtn2");
-  btn.disabled = true; btn.innerHTML = `<span class="mini-spinner"></span> Adding...`;
-  document.getElementById("watermarkResult").innerHTML = `<p style="color:var(--muted);font-size:.79rem;margin-top:8px">Adding watermark...</p>`;
-  try {
-    const res = await fetch("/watermark", { method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({
-        filename: currentResult.filename,
-        text:     document.getElementById("wmText").value.trim() || "AI Generated",
-        position: document.getElementById("wmPosition").value,
-        size:     document.getElementById("wmSize").value,
-        opacity:  parseInt(document.getElementById("wmOpacity").value) / 100,
-      }) });
-    const d = await res.json();
-    if (d.error) { document.getElementById("watermarkResult").innerHTML = `<p style="color:var(--red)">${d.error}</p>`; return; }
-    document.getElementById("watermarkResult").innerHTML = `<div class="process-result" style="margin-top:8px">
-      <img src="${d.download_url}?t=${Date.now()}" onerror="this.src='${currentResult.image_url}'"/>
-      <div class="process-result-info"><span>💧 "${d.text}"</span>
-      <button class="feature-btn" style="padding:5px 11px;font-size:.75rem" onclick="window.location.href='${d.download_url}'">⬇ Download</button></div>
-    </div>`;
-    showToast("💧 Watermark added!");
-  } catch(e) { document.getElementById("watermarkResult").innerHTML = `<p style="color:var(--red)">Error: ${e.message}</p>`; }
-  finally { btn.disabled = false; btn.innerHTML = "💧 Add Watermark"; }
-}
-
-// ═══════════════════════════════════════════════
-// Favorite
-// ═══════════════════════════════════════════════
-function updateFavBtn(isFav) {
-  const btn = document.getElementById("favBtn");
-  if (isFav) { btn.classList.add("fav-active"); btn.innerHTML = `❤️ <span>Unfavorite</span>`; }
-  else        { btn.classList.remove("fav-active"); btn.innerHTML = `🤍 <span data-i18n="favBtn">Favorite</span>`; }
-}
-async function toggleFavorite() {
-  if (!currentResult) return;
-  if (!currentUser) { showToast("🔐 Login to save favorites"); openAuth(); return; }
-  try {
-    const res  = await fetch("/favorites/toggle", { method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({filename:currentResult.filename, image_url:currentResult.image_url,
-        original_prompt:currentResult.original_prompt, style:currentResult.style, timestamp:currentResult.timestamp}) });
-    const data = await res.json();
-    updateFavBtn(data.favorited);
-    document.getElementById("favBadge").textContent = data.count;
-    showToast(data.favorited ? "❤️ Added to favorites!" : "💔 Removed from favorites");
-  } catch(e) {}
-}
-function downloadImage() { if (currentResult?.filename) window.location.href = `/download/${currentResult.filename}`; }
-
-// ═══════════════════════════════════════════════
-// Share
-// ═══════════════════════════════════════════════
-async function shareImage() {
-  if (!currentResult) return;
-  try {
-    const res  = await fetch("/share", { method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({filename:currentResult.filename, image_url:currentResult.image_url,
-        prompt:currentResult.original_prompt, style:currentResult.style}) });
-    const data = await res.json();
-    if (data.error) { showToast("❌ " + data.error); return; }
-    document.getElementById("shareLinkInput").value = data.share_url;
-    document.getElementById("sharePopup").classList.add("show");
-    showToast("🔗 Share link created!");
-  } catch(e) { showToast("❌ Share failed"); }
-}
-function closeSharePopup() { document.getElementById("sharePopup").classList.remove("show"); }
-function copyShareLink() {
-  navigator.clipboard.writeText(document.getElementById("shareLinkInput").value).then(() => showToast("✅ Link copied!"));
-}
-
-// ═══════════════════════════════════════════════
-// History — FIXED: loads for both guests and users
-// ═══════════════════════════════════════════════
-async function loadHistory() {
-  try {
-    const d = await (await fetch("/history")).json();
-    const items = d.history || [];
-    renderGallery("historyGrid", items, false, I18N[currentLang].historyEmpty);
-    document.getElementById("historyBadge").textContent = items.length;
-  } catch(e) {}
-}
-
-// ═══════════════════════════════════════════════
-// Favorites
-// ═══════════════════════════════════════════════
-async function loadFavorites() {
-  try {
-    const d = await (await fetch("/favorites")).json();
-    const items = d.favorites || [];
-    renderGallery("favoritesGrid", items, true, I18N[currentLang].favoritesEmpty);
-    document.getElementById("favBadge").textContent = items.length;
-  } catch(e) {}
-}
-
-// ═══════════════════════════════════════════════
-// Downloads
-// ═══════════════════════════════════════════════
-async function loadDownloads() {
-  const el = document.getElementById("downloadsContent");
-  if (!currentUser) {
-    el.innerHTML = `<div class="login-prompt"><p>${I18N[currentLang].loginToSeeDownloads}</p><button onclick="openAuth()">🔐 Login</button></div>`;
-    return;
+  if(!apiKey){
+    box.innerHTML+=`<div class="am ai" style="color:var(--gold)">⚙️ No API key set. Click ⚙️ Settings in the top bar to add your Claude API key. Or try: "Set up a bedroom" to auto-place furniture without a key!</div>`;
+    box.scrollTop=box.scrollHeight;return;
   }
-  try {
-    const d = await (await fetch("/user/downloads")).json();
-    if (!d.downloads?.length) {
-      el.innerHTML = `<div class="empty-gallery"><div class="ei">⬇️</div>No downloads yet.</div>`;
-      return;
-    }
-    el.innerHTML = `<div style="padding:16px 20px;overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse">
-        <thead><tr style="color:var(--muted);font-size:.7rem;border-bottom:1px solid var(--border)">
-          <th style="padding:6px 9px;text-align:left">File</th>
-          <th style="padding:6px 9px;text-align:left">Time</th>
-        </tr></thead>
-        <tbody>${d.downloads.map(dl => `<tr style="border-bottom:1px solid var(--border);font-size:.8rem">
-          <td style="padding:7px 9px;color:var(--text)">${dl.filename||'—'}</td>
-          <td style="padding:7px 9px;color:var(--muted)">${dl.timestamp||''}</td>
-        </tr>`).join("")}</tbody>
-      </table></div>`;
-  } catch(e) {}
-}
-
-// ═══════════════════════════════════════════════
-// Profile + API Keys
-// ═══════════════════════════════════════════════
-async function loadProfile() {
-  const el = document.getElementById("profileContent");
-  if (!currentUser) {
-    el.innerHTML = `<div class="login-prompt"><p>${I18N[currentLang].loginToSeeProfile}</p><button onclick="openAuth()">🔐 Login / Sign Up</button></div>`;
-    return;
+  box.innerHTML+=`<div class="am ai" id="ai-typing">⏳ Thinking…</div>`;
+  box.scrollTop=box.scrollHeight;
+  const desc=objs.length===0?'Empty scene.':objs.map(o=>`${o.mesh.userData.name}@(${o.mesh.position.x.toFixed(1)},${o.mesh.position.z.toFixed(1)}) rot${Math.round(THREE.MathUtils.radToDeg(o.mesh.rotation.y))}°`).join('; ');
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,
+        system:'You are a helpful 3D home interior design advisor. Respond concisely (2-4 sentences). User designing a home in Uzbekistan. Scene: '+desc,
+        messages:[{role:'user',content:msg}]})
+    });
+    const data=await res.json();
+    const reply=data.content?.[0]?.text||data.error?.message||'No response.';
+    document.getElementById('ai-typing').outerHTML=`<div class="am ai">🤖 ${reply}</div>`;
+  }catch(err){
+    document.getElementById('ai-typing').outerHTML=`<div class="am ai" style="color:var(--danger)">⚠ AI error: ${err.message}</div>`;
   }
-  try {
-    const res  = await fetch("/auth/me");
-    const data = await res.json();
-    if (!data.logged_in) {
-      el.innerHTML = `<div class="login-prompt"><p>Please login</p><button onclick="openAuth()">🔐 Login</button></div>`;
-      return;
-    }
-    const avatarHtml = data.avatar
-      ? `<img class="profile-avatar" src="${data.avatar}" alt="" onerror="this.style.display='none'" />`
-      : `<div class="profile-avatar-placeholder">${(data.display_name||data.username).charAt(0).toUpperCase()}</div>`;
-    const googleBadge = data.login_method === "google"
-      ? `<div class="google-badge"><svg width="12" height="12" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Signed in with Google</div>`
-      : "";
-    el.innerHTML = `
-      <div class="profile-box">
-        <h2>${avatarHtml} ${data.display_name || data.username}</h2>
-        ${googleBadge}
-        <span class="plan-badge plan-${data.plan}">${data.plan === 'pro' ? '⭐ PRO' : 'FREE'}</span>
-        <div class="stats-grid">
-          <div class="stat-card"><div class="stat-number">${data.image_count}</div><div class="stat-label">Images</div></div>
-          <div class="stat-card"><div class="stat-number">${data.favorite_count}</div><div class="stat-label">Favorites</div></div>
-          <div class="stat-card"><div class="stat-number">${data.download_count}</div><div class="stat-label">Downloads</div></div>
-        </div>
-        <p style="font-size:.75rem;color:var(--muted);margin-bottom:5px">Daily: <strong style="color:var(--text)">${data.used_today}/${data.limit_today}</strong> images used</p>
-        <p style="font-size:.75rem;color:var(--muted);margin-bottom:13px">Member since: ${data.joined}</p>
-        <button class="logout-btn" onclick="logout()">🚪 Logout</button>
-      </div>
-      <div class="api-section" id="apiSection">
-        <h3>🔑 API Keys</h3>
-        <p>Use your API key to generate images from any app or script.</p>
-        <div id="apiKeysList"><p style="color:var(--muted);font-size:.79rem">Loading...</p></div>
-        <div style="display:flex;gap:7px;margin-top:11px;flex-wrap:wrap">
-          <input type="text" id="newKeyLabel" placeholder="Label (e.g. My App)"
-            style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:.81rem;padding:7px 10px" />
-          <button class="api-mini-btn" onclick="createApiKey()"
-            style="background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff">+ Create Key</button>
-        </div>
-        <div class="api-docs-box">
-          <span class="hl">POST</span> /api/v1/generate<br>
-          Header: <span class="hl">X-API-Key: aig_your_key</span><br>
-          Body: <span class="hl">{"prompt":"a dragon","style":"fantasy"}</span>
-        </div>
-      </div>`;
-    loadApiKeys();
-  } catch(e) {}
-}
-
-async function loadApiKeys() {
-  try {
-    const res  = await fetch("/user/api-keys");
-    const data = await res.json();
-    const el   = document.getElementById("apiKeysList");
-    if (!el) return;
-    const keys = data.api_keys || {};
-    if (!Object.keys(keys).length) {
-      el.innerHTML = `<p style="color:var(--muted);font-size:.79rem">No API keys yet. Create one below.</p>`;
-      return;
-    }
-    el.innerHTML = Object.entries(keys).map(([key, info]) => `
-      <div class="api-key-row">
-        <span class="api-key-label">${info.label}</span>
-        <input class="api-key-input" value="${key}" readonly onclick="this.select()" />
-        <span style="font-size:.69rem;color:var(--muted)">${info.uses} uses</span>
-        <button class="api-mini-btn danger" onclick="revokeApiKey('${key}')">Revoke</button>
-      </div>`).join("");
-  } catch(e) {}
-}
-
-async function createApiKey() {
-  const label = (document.getElementById("newKeyLabel")?.value || "My App").trim();
-  try {
-    const res  = await fetch("/user/api-keys/create", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({label}) });
-    const data = await res.json();
-    if (data.error) { showToast("❌ " + data.error); return; }
-    showToast("✅ API key created!");
-    loadApiKeys();
-  } catch(e) { showToast("❌ Error creating key"); }
-}
-
-async function revokeApiKey(key) {
-  if (!confirm("Revoke this API key?")) return;
-  try {
-    const res  = await fetch("/user/api-keys/revoke", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({key}) });
-    const data = await res.json();
-    if (data.success) { showToast("🗑️ Key revoked"); loadApiKeys(); }
-  } catch(e) {}
+  box.scrollTop=box.scrollHeight;
 }
 
 // ═══════════════════════════════════════════════
-// Gallery renderer
+// RENDER LOOP
 // ═══════════════════════════════════════════════
-function renderGallery(gridId, items, isFav, emptyMsg) {
-  const grid = document.getElementById(gridId);
-  if (!items?.length) {
-    grid.innerHTML = `<div class="empty-gallery"><div class="ei">${isFav?"🤍":"🕐"}</div>${emptyMsg}</div>`;
-    return;
-  }
-  grid.innerHTML = items.map(item => `
-    <div class="gallery-card">
-      <img src="${item.image_url}" loading="lazy" onerror="this.style.display='none'" />
-      <div class="gallery-card-body">
-        <div class="gallery-card-prompt" title="${(item.original_prompt||'').replace(/"/g,'&quot;')}">${item.original_prompt||"—"}</div>
-        <div class="gallery-card-meta"><span>${item.style||""}</span><span>${item.timestamp||""}</span></div>
-        <div class="gallery-card-actions">
-          <button class="gallery-mini-btn" onclick="usePrompt('${(item.original_prompt||'').replace(/'/g,"\\'")}')">↩ Use</button>
-          <button class="gallery-mini-btn" onclick="navigator.clipboard.writeText('${(item.original_prompt||'').replace(/'/g,"\\'")}').then(()=>showToast('📋 Copied!'))">📋</button>
-          <a href="/download/${item.filename}" class="gallery-mini-btn">⬇</a>
-        </div>
-      </div>
-    </div>`).join("");
+function animate(){
+  requestAnimationFrame(animate);
+  if(selObj)updDimLbl(selObj);
+  renderer.render(scene,camera);
 }
+animate();
 
-function usePrompt(prompt) {
-  document.getElementById("prompt").value = prompt; updateCharCount();
-  document.querySelectorAll(".tab-btn").forEach((b,i) => b.classList.toggle("active", i===0));
-  document.querySelectorAll(".tab-content").forEach((c,i) => c.classList.toggle("active", i===0));
-}
-
-// ═══════════════════════════════════════════════
-// Badge counts — FIXED: refreshes after generate
-// ═══════════════════════════════════════════════
-async function loadBadgeCounts() {
-  try {
-    const [h, f] = await Promise.all([fetch("/history"), fetch("/favorites")]);
-    const hd = await h.json(), fd = await f.json();
-    document.getElementById("historyBadge").textContent = (hd.history||[]).length;
-    document.getElementById("favBadge").textContent     = (fd.favorites||[]).length;
-  } catch(e) {}
-}
-
-// ═══════════════════════════════════════════════
-// Toast
-// ═══════════════════════════════════════════════
-let toastT = null;
-function showToast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = msg; t.classList.add("show");
-  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2500);
-}
-
-// ═══════════════════════════════════════════════
-// Init
-// ═══════════════════════════════════════════════
-applyTranslations();
-setupGoogleBtn();
-handleUrlParams();   // handle Google OAuth redirect
-checkSession();
-loadBadgeCounts();
-
-async function checkSession() { await loadSession(); }
+window.addEventListener('load',()=>{
+  document.getElementById('loading').style.display='none';
+  pushH();
+  if(apiKey)showToast('✅ Ready! API key loaded','success');
+  else showToast('✅ Ready! Add API key in ⚙️ for AI chat','warn');
+});
 </script>
 </body>
 </html>
