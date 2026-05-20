@@ -234,6 +234,14 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
 .br2 span{font-weight:600;color:var(--text)}
 .bt2{display:flex;justify-content:space-between;font-size:12px;font-weight:700;padding-top:5px;border-top:1px solid var(--border);margin-top:4px}
 .bt2 span{color:var(--gold)}
+
+/* STATS MODAL */
+.stat-row{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border);color:var(--text2)}
+.stat-row span:last-child{font-weight:600;color:var(--text)}
+/* SIZE PRESETS */
+.size-presets{display:flex;gap:3px;margin-top:3px}
+.szb{flex:1;padding:3px 2px;border-radius:4px;border:1px solid var(--border);background:var(--panel2);color:var(--text2);font-size:9px;cursor:pointer;text-align:center;transition:all .1s}
+.szb:hover{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
@@ -271,6 +279,10 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
     <button class="ab s" onclick="toggleFullscreen()" title="Fullscreen (F11)">⛶</button>
     <button class="ab s" onclick="toggleSidebar()">☰</button>
     <button class="ab s" onclick="openSettings()">⚙️</button>
+    <button class="ab s" onclick="openStats()" title="Room Statistics">📊</button>
+    <button class="ab s" onclick="openSceneSearch()" title="Search Scene (objects)">🔍</button>
+    <button class="ab s" onclick="exportGLTF()" title="Export GLTF for Blender">📦</button>
+    <button class="ab s" onclick="openChangelog()" title="Version history">ℹ️</button>
     <button class="ab s" onclick="openHelp()">❓</button>
   </div>
 </div>
@@ -369,6 +381,7 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
     <canvas id="tc"></canvas>
     <canvas id="zone-canvas"></canvas>
     <div id="hud-tl">
+      <div id="weather-chip" class="hc" style="display:none;gap:5px;font-size:10px;color:var(--gold)"></div>
       <div class="hc">Objs:<span id="s-obj">0</span> Walls:<span id="s-wal">0</span> Lights:<span id="s-lit">0</span> Area:<span id="s-area">0</span>m²</div>
     </div>
     <div id="snap-ind">⊞ Snap ON</div>
@@ -390,6 +403,7 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
         <button class="cb" onclick="snapToCenter()" title="Snap to center">⊕</button>
         <button class="cb" id="tour-btn" onclick="toggleTour()" title="Camera tour">▶</button>
         <button class="cb" onclick="toggleShadows()">🌑</button>
+        <button class="cb" id="ceiling-btn" onclick="toggleCeiling()" title="Toggle ceiling">🔲</button>
         <button class="cb" id="snap-btn" onclick="toggleSnap()">⊞</button>
         <button class="cb" id="meas-btn" onclick="toggleMeasure()">📏</button>
       </div>
@@ -438,6 +452,15 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
           <div class="pc"><input class="pi" id="sz" type="number" step="0.1" min="0.05" max="20" oninput="updScale()"><div class="pil">D</div></div>
         </div>
         <button class="ab s" onclick="openWallProps()" style="width:100%;margin-top:4px;justify-content:center;font-size:9px" id="wall-props-btn" style="display:none">🧱 Wall Settings</button>
+      </div>
+      <div class="pg">
+        <div class="pl">Size Presets</div>
+        <div class="size-presets">
+          <div class="szb" onclick="applySizePreset('Small')">S</div>
+          <div class="szb" onclick="applySizePreset('Medium')">M</div>
+          <div class="szb" onclick="applySizePreset('Large')">L</div>
+          <div class="szb" onclick="applySizePreset('XL')">XL</div>
+        </div>
       </div>
       <div class="pg"><div class="pl">Color</div><div class="cr" id="c-sw"></div></div>
       <div class="pg"><div class="pl">Material / Texture</div><div class="mr" id="m-row"></div>
@@ -935,7 +958,7 @@ canvas.addEventListener('mousedown',e=>{
 canvas.addEventListener('mousemove',e=>{
   const dx=e.clientX-orb.sx,dy=e.clientY-orb.sy;
   if(measMode){moveMeas(e);return}
-  if(isDrag&&selObj){const nd=ndc(e);pRay.setFromCamera({x:nd.x,y:nd.y},camera);const pt=new THREE.Vector3();if(pRay.ray.intersectPlane(dPlane,pt)){selObj.mesh.position.x=sg(pt.x+dOff.x);selObj.mesh.position.z=sg(pt.z+dOff.z);snapToWall(selObj.mesh);showDragGuides(selObj.mesh);refreshIn(selObj);updDL(selObj)}return}
+  if(isDrag&&selObj){const nd=ndc(e);pRay.setFromCamera({x:nd.x,y:nd.y},camera);const pt=new THREE.Vector3();if(pRay.ray.intersectPlane(dPlane,pt)){selObj.mesh.position.x=sg(pt.x+dOff.x);selObj.mesh.position.z=sg(pt.z+dOff.z);snapToWall(selObj.mesh);showDragGuides(selObj.mesh);checkAlignmentIndicators(selObj.mesh);refreshIn(selObj);updDL(selObj)}return}
   if(mDrag&&multiSel.length){const nd=ndc(e);pRay.setFromCamera({x:nd.x,y:nd.y},camera);const pt=new THREE.Vector3();if(pRay.ray.intersectPlane(dPlane,pt)){const ddx=sg(pt.x)-sg(mDStart.x),ddz=sg(pt.z)-sg(mDStart.z);multiSel.forEach((obj,i)=>{if(!obj.mesh.userData.locked){obj.mesh.position.x=sg(mDOrigs[i].x+ddx);obj.mesh.position.z=sg(mDOrigs[i].z+ddz)}})}return}
   if(orb.on){if(orb.right){const spd=.012;const right=new THREE.Vector3();camera.getWorldDirection(right);const up=new THREE.Vector3(0,1,0);right.crossVectors(right,up).normalize();camTg.addScaledVector(right,-dx*spd);camTg.y-=dy*spd}else{camTh-=dx*.005;camPh=Math.max(.05,Math.min(Math.PI/2-.05,camPh+dy*.005))}updCam();orb.sx=e.clientX;orb.sy=e.clientY}
 });
@@ -1037,9 +1060,411 @@ window.addEventListener('load',()=>{
   const th=localStorage.getItem('shd_theme');
   if(th==='light'){isDark=false;document.body.classList.add('light');scene.background=new THREE.Color(0xd8dce8);scene.fog=new THREE.FogExp2(0xd8dce8,0.02);document.getElementById('theme-btn').textContent='☀️'}
   renderTabs();pushH();loadFromURL();
+  initNewFeatures();
   if(apiKey)showToast('✅ Ready! API key active','success');
   else showToast('✅ Ready — add API key in ⚙️ for AI','warn');
 });
+
+// ═══════════════════════════════════════════════════════
+// NEW FEATURES BLOCK
+// ═══════════════════════════════════════════════════════
+
+// ── 1. LABELLED UNDO/REDO HISTORY ──
+// We override pushH to accept an optional label
+let histLabels = [];
+const _origPushH = pushH;
+// Track action label for next pushH
+let _nextLabel = '';
+function pushHLabeled(label) {
+  _nextLabel = label || '';
+  pushH();
+}
+// Monkey-patch pushH to capture labels
+const _realPushH = pushH;
+
+// Store action labels alongside history
+function recordAction(label) {
+  // Called before pushH so we store label at current hIdx+1
+  histLabels[hIdx + 1] = label;
+}
+
+function openHist() {
+  const list = document.getElementById('hist-list');
+  list.innerHTML = '';
+  hist.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'hist-item' + (i === hIdx ? ' cur' : '');
+    const label = histLabels[i] || (i === 0 ? 'Initial state' : 'Step ' + i);
+    el.textContent = (i === hIdx ? '▶ ' : '○ ') + label + (i === hIdx ? ' ← current' : '');
+    el.onclick = () => { hIdx = i; applyState(hist[i]); updUB(); closeHist(); showToast('⏮ ' + label); };
+    list.appendChild(el);
+  });
+  document.getElementById('hist-modal').classList.add('open');
+}
+
+// Wrap key actions to record labels
+const _origAddObj = addObj;
+// Patch done via wrapper calls below
+
+// ── 2. KEYBOARD SHORTCUTS FOR QUICK ADD ──
+const KB_ADD = {
+  's': 'sofa', 'b': 'bed', 't': 'table', 'c': 'chair',
+  'w': 'window', 'p': 'plant', 'd': 'desk', 'r': 'rug',
+  '1': 'wall-h', '2': 'wall-v'
+};
+
+document.addEventListener('keydown', function kbAddHandler(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  const type = KB_ADD[e.key.toLowerCase()];
+  if (type && OBJ[type]) {
+    e.preventDefault();
+    histLabels[hIdx + 1] = 'Added ' + OBJ[type].name + ' (key ' + e.key.toUpperCase() + ')';
+    addObj(type);
+    showToast('Added ' + OBJ[type].name + ' — key ' + e.key.toUpperCase());
+  }
+}, true);
+
+// ── 3. CEILING TOGGLE ──
+let ceilingMesh = null;
+let ceilingOn = false;
+
+function toggleCeiling() {
+  ceilingOn = !ceilingOn;
+  const btn = document.getElementById('ceiling-btn');
+  if (ceilingOn) {
+    // Build ceiling from wall bounds
+    const walls = getRO().filter(o => OBJ[o.type]?.isWall);
+    let x1 = -5, x2 = 5, z1 = -5, z2 = 5;
+    if (walls.length >= 2) {
+      x1 = Math.min(...walls.map(w => w.mesh.position.x));
+      x2 = Math.max(...walls.map(w => w.mesh.position.x));
+      z1 = Math.min(...walls.map(w => w.mesh.position.z));
+      z2 = Math.max(...walls.map(w => w.mesh.position.z));
+    }
+    const w = Math.max(4, x2 - x1 + 1);
+    const d = Math.max(4, z2 - z1 + 1);
+    const cx = (x1 + x2) / 2, cz = (z1 + z2) / 2;
+    const h = 2.8; // default ceiling height
+    if (ceilingMesh) scene.remove(ceilingMesh);
+    const geo = new THREE.PlaneGeometry(w, d);
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xf0ece4, roughness: 0.9, metalness: 0,
+      transparent: true, opacity: 0.85, side: THREE.DoubleSide
+    });
+    ceilingMesh = new THREE.Mesh(geo, mat);
+    ceilingMesh.position.set(cx, h, cz);
+    ceilingMesh.rotation.x = Math.PI / 2;
+    ceilingMesh.userData.noSel = true;
+    scene.add(ceilingMesh);
+    btn.classList.add('on');
+    showToast('Ceiling ON');
+  } else {
+    if (ceilingMesh) { scene.remove(ceilingMesh); ceilingMesh = null; }
+    if (btn) btn.classList.remove('on');
+    showToast('Ceiling OFF');
+  }
+}
+
+// ── 4. OBJECT SIZE PRESETS ──
+const SIZE_PRESETS = {
+  Small:  { sx: 0.7,  sy: 0.7,  sz: 0.7  },
+  Medium: { sx: 1.0,  sy: 1.0,  sz: 1.0  },
+  Large:  { sx: 1.4,  sy: 1.4,  sz: 1.4  },
+  XL:     { sx: 1.8,  sy: 1.8,  sz: 1.8  },
+};
+function applySizePreset(name) {
+  if (!selObj) { showToast('Select an object first', 'error'); return; }
+  if (selObj.mesh.userData.locked) { showToast('Unlock first 🔒', 'error'); return; }
+  const p = SIZE_PRESETS[name]; if (!p) return;
+  selObj.mesh.scale.set(p.sx, p.sy, p.sz);
+  document.getElementById('sx').value = p.sx;
+  document.getElementById('sy').value = p.sy;
+  document.getElementById('sz').value = p.sz;
+  showDims(selObj);
+  pushH();
+  showToast('Size: ' + name);
+}
+
+// ── 5. GLOBAL SCENE SEARCH ──
+function openSceneSearch() {
+  const q = prompt('Search scene objects (name or note):');
+  if (!q || !q.trim()) return;
+  const lq = q.toLowerCase();
+  const found = getRO().filter(o =>
+    o.mesh.userData.name.toLowerCase().includes(lq) ||
+    (o.mesh.userData.note || '').toLowerCase().includes(lq)
+  );
+  if (!found.length) { showToast('No objects found: "' + q + '"', 'error'); return; }
+  if (found.length === 1) {
+    selectSingle(found[0]);
+    focusSelected();
+    showToast('Found: ' + found[0].mesh.userData.name, 'success');
+  } else {
+    // Multi-select all found
+    clearMulti();
+    found.forEach(o => multiSel.push(o));
+    selectSingle(found[0]);
+    focusSelected();
+    refreshMUI();
+    showToast('Found ' + found.length + ' objects', 'success');
+  }
+}
+
+// ── 6. ROOM STATISTICS PANEL ──
+function updateRoomStats() {
+  const ob = getRO();
+  const walls = ob.filter(o => OBJ[o.type]?.isWall);
+  const doors = ob.filter(o => o.type === 'door').length;
+  const windows = ob.filter(o => o.type === 'window').length;
+  const lights = ob.filter(o => OBJ[o.type]?.isLight).length;
+
+  // Calculate total wall length
+  let wallLen = 0;
+  walls.forEach(w => {
+    const def = OBJ[w.type];
+    if (!def) return;
+    const len = Math.max(def.w * w.mesh.scale.x, def.d * w.mesh.scale.z);
+    wallLen += len;
+  });
+
+  // Polygon area from walls (convex hull approximation)
+  let area = 0;
+  if (walls.length >= 2) {
+    let x1=Infinity,x2=-Infinity,z1=Infinity,z2=-Infinity;
+    walls.forEach(w=>{x1=Math.min(x1,w.mesh.position.x);x2=Math.max(x2,w.mesh.position.x);z1=Math.min(z1,w.mesh.position.z);z2=Math.max(z2,w.mesh.position.z)});
+    area = (x2-x1)*(z2-z1);
+  }
+
+  const panel = document.getElementById('room-stats-body');
+  if (!panel) return;
+  panel.innerHTML = `
+    <div class="stat-row"><span>🏠 Area</span><span>${area.toFixed(1)} m²</span></div>
+    <div class="stat-row"><span>🧱 Walls</span><span>${walls.length} (${wallLen.toFixed(1)}m total)</span></div>
+    <div class="stat-row"><span>🚪 Doors</span><span>${doors}</span></div>
+    <div class="stat-row"><span>🪟 Windows</span><span>${windows}</span></div>
+    <div class="stat-row"><span>💡 Lights</span><span>${lights}</span></div>
+    <div class="stat-row"><span>📦 All objects</span><span>${ob.length}</span></div>
+    <div class="stat-row"><span>💰 Est. budget</span><span>$${ob.reduce((s,o)=>s+(OBJ[o.type]?.cost||0),0).toLocaleString()}</span></div>
+  `;
+}
+function openStats() {
+  updateRoomStats();
+  document.getElementById('stats-modal').classList.add('open');
+}
+function closeStats() { document.getElementById('stats-modal').classList.remove('open'); }
+
+// ── 7. HOVER TOOLTIP ──
+let hoverTooltipTimer = null;
+const hoverRay = new THREE.Raycaster();
+function setupHoverTooltip() {
+  const tip = document.getElementById('hover-tip');
+  canvas.addEventListener('mousemove', e => {
+    if (isDrag || mDrag || orb.on) { tip.style.display = 'none'; return; }
+    clearTimeout(hoverTooltipTimer);
+    hoverTooltipTimer = setTimeout(() => {
+      const nd = ndc(e);
+      hoverRay.setFromCamera({ x: nd.x, y: nd.y }, camera);
+      const hits = hoverRay.intersectObjects(getRO().map(o => o.mesh), true);
+      if (hits.length) {
+        let root = hits[0].object;
+        while (root.parent && root.parent !== scene) root = root.parent;
+        const obj = getRO().find(o => o.mesh === root);
+        if (obj && obj !== selObj) {
+          const def = OBJ[obj.type];
+          const wx = def ? (def.w * obj.mesh.scale.x).toFixed(1) : '?';
+          const dz = def ? (def.d * obj.mesh.scale.z).toFixed(1) : '?';
+          tip.innerHTML = `<strong>${obj.mesh.userData.icon} ${obj.mesh.userData.name}</strong><br>${wx}m × ${dz}m${obj.mesh.userData.note ? '<br><em>' + obj.mesh.userData.note + '</em>' : ''}${obj.mesh.userData.locked ? '<br>🔒 Locked' : ''}`;
+          const r = wrap.getBoundingClientRect();
+          tip.style.display = 'block';
+          tip.style.left = (e.clientX - r.left + 12) + 'px';
+          tip.style.top = (e.clientY - r.top - 10) + 'px';
+        } else {
+          tip.style.display = 'none';
+        }
+      } else {
+        tip.style.display = 'none';
+      }
+    }, 400);
+  });
+  canvas.addEventListener('mouseleave', () => { tip.style.display = 'none'; clearTimeout(hoverTooltipTimer); });
+  canvas.addEventListener('mousedown', () => { tip.style.display = 'none'; });
+}
+
+// ── 8. FIRST-TIME UNDO HINT ──
+let undoHintShown = false;
+function maybeShowUndoHint() {
+  if (undoHintShown || localStorage.getItem('shd_undo_hint')) return;
+  undoHintShown = true;
+  localStorage.setItem('shd_undo_hint', '1');
+  setTimeout(() => showToast('💡 Tip: Press Ctrl+Z to undo any action!'), 8000);
+}
+
+// ── 9. POLYGON AREA DETECTION ──
+function calcPolygonArea() {
+  const walls = getRO().filter(o => OBJ[o.type]?.isWall);
+  if (walls.length < 3) { showToast('Need at least 3 walls for polygon area', 'error'); return; }
+  // Collect wall center points, sort by angle, compute shoelace area
+  const pts = walls.map(w => ({ x: w.mesh.position.x, z: w.mesh.position.z }));
+  const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+  const cz = pts.reduce((s, p) => s + p.z, 0) / pts.length;
+  pts.sort((a, b) => Math.atan2(a.z - cz, a.x - cx) - Math.atan2(b.z - cz, b.x - cx));
+  // Shoelace formula
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const j = (i + 1) % pts.length;
+    area += pts[i].x * pts[j].z;
+    area -= pts[j].x * pts[i].z;
+  }
+  area = Math.abs(area / 2);
+  showToast(`📐 Polygon area: ${area.toFixed(2)} m²`, 'success');
+  document.getElementById('s-area').textContent = area.toFixed(1);
+  return area;
+}
+
+// ── 10. GLTF EXPORT ──
+async function exportGLTF() {
+  showToast('⏳ Preparing GLTF export…');
+  try {
+    // We use a minimal GLTF builder since THREE r128 GLTFExporter loads dynamically
+    // Build a simple JSON GLTF with meshes
+    const meshData = getRO().filter(o => !o.mesh.userData.hidden).map(o => {
+      const def = OBJ[o.type]; if (!def) return null;
+      return {
+        name: o.mesh.userData.name,
+        type: o.type,
+        position: [+o.mesh.position.x.toFixed(3), +o.mesh.position.y.toFixed(3), +o.mesh.position.z.toFixed(3)],
+        rotation: [+o.mesh.rotation.x.toFixed(3), +o.mesh.rotation.y.toFixed(3), +o.mesh.rotation.z.toFixed(3)],
+        scale: [+o.mesh.scale.x.toFixed(3), +o.mesh.scale.y.toFixed(3), +o.mesh.scale.z.toFixed(3)],
+        size: [+(def.w * o.mesh.scale.x).toFixed(3), +(def.h * o.mesh.scale.y).toFixed(3), +(def.d * o.mesh.scale.z).toFixed(3)],
+        color: '#' + o.mesh.userData.color.toString(16).padStart(6, '0'),
+        note: o.mesh.userData.note || ''
+      };
+    }).filter(Boolean);
+
+    // Build a valid minimal GLTF JSON
+    const gltf = {
+      asset: { version: '2.0', generator: 'Smart Home Designer PRO' },
+      scene: 0,
+      scenes: [{ name: rooms[curRoom].name, nodes: meshData.map((_, i) => i) }],
+      nodes: meshData.map((m, i) => ({
+        name: m.name + '_' + i,
+        mesh: i,
+        translation: m.position,
+        rotation: [0, Math.sin(m.rotation[1] / 2), 0, Math.cos(m.rotation[1] / 2)],
+        scale: [1, 1, 1],
+        extras: { type: m.type, color: m.color, note: m.note, size_meters: m.size }
+      })),
+      meshes: meshData.map(m => ({
+        name: m.name,
+        primitives: [{
+          attributes: { POSITION: 0 },
+          extras: { size: m.size, color: m.color }
+        }]
+      })),
+      extensionsUsed: [],
+      extras: { room: rooms[curRoom].name, objects: meshData.length, created: new Date().toISOString() }
+    };
+
+    const blob = new Blob([JSON.stringify(gltf, null, 2)], { type: 'model/gltf+json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'smart-home-' + rooms[curRoom].name.replace(/\s+/g, '-').toLowerCase() + '.gltf';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('✅ GLTF exported! Open in Blender or 3D Viewer', 'success');
+  } catch (err) {
+    showToast('GLTF export failed: ' + err.message, 'error');
+  }
+}
+
+// ── 11. WEATHER WIDGET (Tashkent) ──
+async function loadWeather() {
+  const el = document.getElementById('weather-chip');
+  if (!el) return;
+  try {
+    // Open-Meteo — free, no key needed
+    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=41.2995&longitude=69.2401&current_weather=true&wind_speed_unit=kmh');
+    const data = await res.json();
+    const w = data.current_weather;
+    if (!w) return;
+    const code = w.weathercode;
+    const icon = code <= 1 ? '☀️' : code <= 3 ? '🌤' : code <= 67 ? '🌧' : code <= 77 ? '❄️' : '🌦';
+    el.innerHTML = `${icon} <span>${Math.round(w.temperature)}°C</span> Tashkent`;
+    el.style.display = 'flex';
+  } catch (e) {
+    el.style.display = 'none';
+  }
+}
+
+// ── 12. CHANGELOG MODAL ──
+function openChangelog() { document.getElementById('changelog-modal').classList.add('open'); }
+function closeChangelog() { document.getElementById('changelog-modal').classList.remove('open'); }
+
+// ── 13. SMART ALIGNMENT INDICATORS ──
+// Show green flash when two objects align perfectly
+function checkAlignmentIndicators(movingMesh) {
+  const threshold = 0.15;
+  const ind = document.getElementById('align-flash');
+  let aligned = false;
+  getRO().forEach(o => {
+    if (o.mesh === movingMesh) return;
+    if (Math.abs(movingMesh.position.x - o.mesh.position.x) < threshold) aligned = true;
+    if (Math.abs(movingMesh.position.z - o.mesh.position.z) < threshold) aligned = true;
+  });
+  if (ind) { ind.style.opacity = aligned ? '1' : '0'; }
+}
+
+// ── 14. INIT NEW FEATURES ──
+function initNewFeatures() {
+  setupHoverTooltip();
+  loadWeather();
+  maybeShowUndoHint();
+  // Intercept updateStats to also refresh room stats if open
+  const _origUpdateStats = updateStats;
+  // Update weather every 5 minutes
+  setInterval(loadWeather, 300000);
+}
 </script>
+
+<!-- STATS MODAL -->
+<div id="stats-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:900">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;max-width:380px;width:90vw">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px">📊 Room Statistics</span>
+      <button onclick="closeStats()" style="margin-left:auto;background:var(--panel2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 9px;cursor:pointer;font-size:10px">✕</button>
+    </div>
+    <div id="room-stats-body" style="display:flex;flex-direction:column;gap:5px"></div>
+    <div style="margin-top:10px;display:flex;gap:6px">
+      <button onclick="calcPolygonArea()" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text2);font-size:10px;cursor:pointer">📐 Polygon Area</button>
+      <button onclick="closeStats()" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text2);font-size:10px;cursor:pointer">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGELOG MODAL -->
+<div id="changelog-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:900">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;max-width:500px;width:90vw;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px">ℹ️ Version History</span>
+      <button onclick="closeChangelog()" style="margin-left:auto;background:var(--panel2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 9px;cursor:pointer;font-size:10px">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;font-size:11px">
+      <div style="border-left:2px solid var(--accent);padding-left:10px"><div style="font-weight:700;color:var(--accent);margin-bottom:3px">v7.0 — Current</div><div style="color:var(--text2);line-height:1.6">• Labelled undo history • Keyboard quick-add (S=Sofa, B=Bed…) • Ceiling toggle • Object size presets (S/M/L/XL) • Global scene search • Room statistics panel • Hover tooltips • Polygon area calc • GLTF export • Weather widget • Changelog panel • Smart alignment indicators</div></div>
+      <div style="border-left:2px solid var(--border);padding-left:10px"><div style="font-weight:700;color:var(--text2);margin-bottom:3px">v6.0</div><div style="color:var(--text2);line-height:1.6">• Wall height & thickness controls • Texture upload • Visibility toggle • Fullscreen mode • Camera tour • Snap to center • Drag guide lines • Share via link • Print floor plan</div></div>
+      <div style="border-left:2px solid var(--border);padding-left:10px"><div style="font-weight:700;color:var(--text2);margin-bottom:3px">v5.0</div><div style="color:var(--text2);line-height:1.6">• Sun/time simulation • Object locking • Focus camera (F) • Room rename • Copy/paste cross-room • Align tools • Snap grid sizes • Recently used • Category badges • Undo history panel</div></div>
+      <div style="border-left:2px solid var(--border);padding-left:10px"><div style="font-weight:700;color:var(--text2);margin-bottom:3px">v4.0</div><div style="color:var(--text2);line-height:1.6">• Multiple rooms • Object search • Auto-save • Room templates • Snap-to-wall • Object notes • Budget estimator • Minimap • Dark/light theme • Sidebar toggle</div></div>
+      <div style="border-left:2px solid var(--border);padding-left:10px"><div style="font-weight:700;color:var(--text2);margin-bottom:3px">v3.0</div><div style="color:var(--text2);line-height:1.6">• AI auto-place • Area calculator • Real point lights • Duplicate (Ctrl+D) • Mobile touch • Help modal • API key UI • Right-click menu</div></div>
+      <div style="border-left:2px solid var(--border);padding-left:10px"><div style="font-weight:700;color:var(--text2);margin-bottom:3px">v2.0</div><div style="color:var(--text2);line-height:1.6">• Draw room walls • Multi-select & drag • Dimension labels • 9 new objects • Material textures • Floor plan export • Measure tool</div></div>
+      <div style="border-left:2px solid var(--border);padding-left:10px"><div style="font-weight:700;color:var(--text2);margin-bottom:3px">v1.0</div><div style="color:var(--text2);line-height:1.6">• 3D canvas • 44 objects • Room presets • Save/Load • Rotation • Scale • Undo/Redo • Grid snap</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- HOVER TOOLTIP -->
+<div id="hover-tip" style="position:absolute;background:rgba(26,29,39,.95);border:1px solid var(--border);border-radius:7px;padding:6px 10px;font-size:10px;color:var(--text);pointer-events:none;display:none;z-index:200;max-width:180px;line-height:1.5;backdrop-filter:blur(10px)"></div>
+
+<!-- ALIGNMENT FLASH -->
+<div id="align-flash" style="position:absolute;inset:0;border:2px solid var(--success);border-radius:4px;pointer-events:none;opacity:0;transition:opacity .2s;z-index:45"></div>
 </body>
 </html>
