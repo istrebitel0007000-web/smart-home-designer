@@ -242,6 +242,11 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
 .size-presets{display:flex;gap:3px;margin-top:3px}
 .szb{flex:1;padding:3px 2px;border-radius:4px;border:1px solid var(--border);background:var(--panel2);color:var(--text2);font-size:9px;cursor:pointer;text-align:center;transition:all .1s}
 .szb:hover{border-color:var(--accent);color:var(--accent)}
+
+/* v8 new CSS */
+#obj-info-card{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;margin-bottom:8px;display:none}
+#cheat-sheet kbd{font-family:monospace}
+.snap-grid-dot{fill:rgba(79,124,255,.3)}
 </style>
 </head>
 <body>
@@ -283,6 +288,9 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
     <button class="ab s" onclick="openSceneSearch()" title="Search Scene (objects)">🔍</button>
     <button class="ab s" onclick="exportGLTF()" title="Export GLTF for Blender">📦</button>
     <button class="ab s" onclick="openChangelog()" title="Version history">ℹ️</button>
+    <button class="ab s" onclick="openProjectsModal()" title="My Projects">🗂 Projects</button>
+    <button class="ab s" onclick="exportSummary()" title="Export summary HTML/PDF">📄 Summary</button>
+    <button class="ab s" id="cheat-btn" onclick="toggleCheatSheet()" title="Keyboard shortcuts (?)">⌨️</button>
     <button class="ab s" onclick="openHelp()">❓</button>
   </div>
 </div>
@@ -380,6 +388,7 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
   <div id="cw">
     <canvas id="tc"></canvas>
     <canvas id="zone-canvas"></canvas>
+    <canvas id="snap-grid-canvas" style="position:absolute;inset:0;pointer-events:none;z-index:8;display:none"></canvas>
     <div id="hud-tl">
       <div id="weather-chip" class="hc" style="display:none;gap:5px;font-size:10px;color:var(--gold)"></div>
       <div class="hc">Objs:<span id="s-obj">0</span> Walls:<span id="s-wal">0</span> Lights:<span id="s-lit">0</span> Area:<span id="s-area">0</span>m²</div>
@@ -424,6 +433,7 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
     </div>
     <div id="props-panel" style="padding:7px 9px;border-top:1px solid var(--border);display:none">
       <div class="pl">Selected</div>
+      <div id="obj-info-card"></div>
       <div id="sel-nm" style="font-weight:600;font-size:12px;margin-bottom:6px;color:var(--text)"></div>
       <div id="dim-disp" style="font-size:10px;color:var(--gold);margin-bottom:4px;display:none"></div>
       <div id="cost-disp" style="font-size:10px;color:var(--text2);margin-bottom:6px"></div>
@@ -453,6 +463,7 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
         </div>
         <button class="ab s" onclick="openWallProps()" style="width:100%;margin-top:4px;justify-content:center;font-size:9px" id="wall-props-btn" style="display:none">🧱 Wall Settings</button>
       </div>
+      <button onclick="openDimDialog()" style="width:100%;padding:5px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--accent);font-size:10px;cursor:pointer;margin-bottom:6px">📐 Set Exact Dimensions (m)</button>
       <div class="pg">
         <div class="pl">Size Presets</div>
         <div class="size-presets">
@@ -462,7 +473,7 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
           <div class="szb" onclick="applySizePreset('XL')">XL</div>
         </div>
       </div>
-      <div class="pg"><div class="pl">Color</div><div class="cr" id="c-sw"></div></div>
+      <div class="pg"><div class="pl" id="color-section-label">Color</div><div class="cr" id="c-sw"></div></div>
       <div class="pg"><div class="pl">Material / Texture</div><div class="mr" id="m-row"></div>
         <button class="ab s" onclick="openTexUpload()" style="width:100%;margin-top:4px;justify-content:center;font-size:9px">🖼 Upload Custom Texture</button>
       </div>
@@ -489,6 +500,7 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
       <div style="display:flex;gap:4px;margin-top:4px">
         <button class="ab s" onclick="copyToClipboard()" style="flex:1;justify-content:center;font-size:10px">📋 Copy</button>
         <button class="ab s" onclick="pasteFromClipboard()" style="flex:1;justify-content:center;font-size:10px">📋 Paste</button>
+        <button class="ab s" onclick="groupSelected()" style="flex:1;justify-content:center;font-size:10px">📦 Group</button>
         <button class="ab d" onclick="delSel()" style="flex:1;justify-content:center;font-size:10px">🗑 Del</button>
       </div>
     </div>
@@ -541,6 +553,7 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
   </div>
   <canvas id="fp-cv"></canvas>
   <div class="fpb">
+    <button class="ab s" id="fp-theme-btn" onclick="toggleFPTheme()">☀️ Light Plan</button>
     <button class="ab s" onclick="printFP()">🖨 Print</button>
     <button class="ab" onclick="dlFP()">⬇ Download PNG</button>
   </div>
@@ -1061,6 +1074,7 @@ window.addEventListener('load',()=>{
   if(th==='light'){isDark=false;document.body.classList.add('light');scene.background=new THREE.Color(0xd8dce8);scene.fog=new THREE.FogExp2(0xd8dce8,0.02);document.getElementById('theme-btn').textContent='☀️'}
   renderTabs();pushH();loadFromURL();
   initNewFeatures();
+  initV8Features();
   if(apiKey)showToast('✅ Ready! API key active','success');
   else showToast('✅ Ready — add API key in ⚙️ for AI','warn');
 });
@@ -1425,6 +1439,443 @@ function initNewFeatures() {
   // Update weather every 5 minutes
   setInterval(loadWeather, 300000);
 }
+
+// ════════════════════════════════════════════════
+// FEATURE PACK v8 — 15 new features
+// ════════════════════════════════════════════════
+
+// ── 1. OBJECT GROUPING / UNGROUP ──
+let groups = []; // [{id, name, members:[objId,...], mesh:null}]
+let groupCnt = 0;
+
+function groupSelected() {
+  const targets = multiSel.length > 1 ? [...multiSel] : [];
+  if (targets.length < 2) { showToast('Select 2+ objects to group', 'error'); return; }
+  pushH();
+  const gid = 'grp_' + (++groupCnt);
+  groups.push({ id: gid, name: 'Group ' + groupCnt, members: targets.map(o => o.id) });
+  clearMulti(); deselCur();
+  showToast('📦 Grouped ' + targets.length + ' objects as "Group ' + groupCnt + '"', 'success');
+  pushH();
+}
+
+function ungroupAll() {
+  if (!groups.length) { showToast('No groups to ungroup', 'error'); return; }
+  pushH();
+  groups = [];
+  showToast('📦 All groups removed', 'success');
+  pushH();
+}
+
+function getGroupOf(obj) {
+  return groups.find(g => g.members.includes(obj.id)) || null;
+}
+
+function selectGroup(obj) {
+  const grp = getGroupOf(obj);
+  if (!grp) { selectSingle(obj); return; }
+  clearMulti();
+  grp.members.forEach(id => {
+    const o = getRO().find(x => x.id === id);
+    if (o) multiSel.push(o);
+  });
+  if (multiSel.length) selectSingle(multiSel[0]);
+  refreshMUI();
+  showToast('Selected group: ' + grp.name);
+}
+
+// ── 2. DIMENSION INPUT DIALOG ──
+function openDimDialog() {
+  if (!selObj) { showToast('Select an object first', 'error'); return; }
+  if (selObj.mesh.userData.locked) { showToast('Unlock first 🔒', 'error'); return; }
+  const def = OBJ[selObj.type || selObj.mesh.userData.defKey];
+  if (!def) return;
+  const curW = (def.w * selObj.mesh.scale.x).toFixed(2);
+  const curH = (def.h * selObj.mesh.scale.y).toFixed(2);
+  const curD = (def.d * selObj.mesh.scale.z).toFixed(2);
+  document.getElementById('dim-w-in').value = curW;
+  document.getElementById('dim-h-in').value = curH;
+  document.getElementById('dim-d-in').value = curD;
+  document.getElementById('dim-name-lbl').textContent = selObj.mesh.userData.icon + ' ' + selObj.mesh.userData.name;
+  document.getElementById('dim-dialog').classList.add('open');
+}
+function applyDimDialog() {
+  if (!selObj) return;
+  const def = OBJ[selObj.type || selObj.mesh.userData.defKey];
+  if (!def) return;
+  const w = parseFloat(document.getElementById('dim-w-in').value);
+  const h = parseFloat(document.getElementById('dim-h-in').value);
+  const d = parseFloat(document.getElementById('dim-d-in').value);
+  if (isNaN(w) || isNaN(h) || isNaN(d) || w <= 0 || h <= 0 || d <= 0) {
+    showToast('Enter valid positive dimensions', 'error'); return;
+  }
+  selObj.mesh.scale.set(w / def.w, h / def.h, d / def.d);
+  document.getElementById('sx').value = +(selObj.mesh.scale.x).toFixed(2);
+  document.getElementById('sy').value = +(selObj.mesh.scale.y).toFixed(2);
+  document.getElementById('sz').value = +(selObj.mesh.scale.z).toFixed(2);
+  showDims(selObj);
+  pushH();
+  closeDimDialog();
+  showToast('📐 Dimensions applied: ' + w + '×' + h + '×' + d + 'm', 'success');
+}
+function closeDimDialog() { document.getElementById('dim-dialog').classList.remove('open'); }
+
+// ── 3. MULTIPLE SAVE SLOTS ──
+const SAVES_KEY = 'shd_saves_v8';
+function getSaves() {
+  try { return JSON.parse(localStorage.getItem(SAVES_KEY) || '{}'); } catch { return {}; }
+}
+function openProjectsModal() {
+  const saves = getSaves();
+  const list = document.getElementById('projects-list');
+  list.innerHTML = '';
+  const keys = Object.keys(saves);
+  if (!keys.length) {
+    list.innerHTML = '<div style="color:var(--text2);font-size:11px;padding:8px 0">No saved projects yet. Click "Save As" to create one.</div>';
+  } else {
+    keys.forEach(name => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid var(--border)';
+      const info = saves[name];
+      row.innerHTML = `
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:600;color:var(--text)">${name}</div>
+          <div style="font-size:9px;color:var(--text2)">${info.rooms || 1} room(s) · ${info.objs || 0} objects · ${info.date || ''}</div>
+        </div>
+        <button onclick="loadSaveSlot('${name}')" style="padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--panel2);color:var(--accent);font-size:9px;cursor:pointer">Load</button>
+        <button onclick="deleteSaveSlot('${name}')" style="padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--panel2);color:var(--danger);font-size:9px;cursor:pointer">Del</button>`;
+      list.appendChild(row);
+    });
+  }
+  document.getElementById('projects-modal').classList.add('open');
+}
+function closeProjectsModal() { document.getElementById('projects-modal').classList.remove('open'); }
+function saveAsSlot() {
+  const name = prompt('Save project as:', 'My Design ' + new Date().toLocaleDateString());
+  if (!name || !name.trim()) return;
+  const saves = getSaves();
+  const totalObjs = rooms.reduce((s, r) => s + r.objs.length, 0);
+  saves[name.trim()] = {
+    data: getJSON(),
+    rooms: rooms.length,
+    objs: totalObjs,
+    date: new Date().toLocaleDateString()
+  };
+  try {
+    localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
+    showToast('💾 Saved as "' + name.trim() + '"', 'success');
+    openProjectsModal();
+  } catch { showToast('Storage full — delete old saves', 'error'); }
+}
+function loadSaveSlot(name) {
+  const saves = getSaves();
+  if (!saves[name]) { showToast('Save not found', 'error'); return; }
+  if (loadJSON(saves[name].data)) {
+    showToast('📂 Loaded "' + name + '"', 'success');
+    closeProjectsModal();
+  } else { showToast('Load error', 'error'); }
+}
+function deleteSaveSlot(name) {
+  if (!confirm('Delete save "' + name + '"?')) return;
+  const saves = getSaves();
+  delete saves[name];
+  localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
+  showToast('Deleted "' + name + '"');
+  openProjectsModal();
+}
+
+// ── 4. AUTO ROOM NAME ON PRESET LOAD ──
+// Patch loadPreset to rename current room tab automatically
+const _origLoadPreset = loadPreset;
+function loadPreset(name) {
+  _origLoadPreset(name);
+  const niceName = name.charAt(0).toUpperCase() + name.slice(1);
+  rooms[curRoom].name = niceName;
+  renderTabs();
+  document.getElementById('rnd').textContent = '— ' + niceName;
+  showToast('🏠 ' + niceName + ' loaded & room renamed!', 'success');
+}
+
+// ── 5. ANIMATED OBJECT PLACEMENT ──
+function animateIn(mesh) {
+  mesh.scale.set(0.01, 0.01, 0.01);
+  const targetScale = { x: mesh.userData._scaleX || 1, y: mesh.userData._scaleY || 1, z: mesh.userData._scaleZ || 1 };
+  let t = 0;
+  function step() {
+    t = Math.min(t + 0.08, 1);
+    const ease = 1 - Math.pow(1 - t, 3); // ease-out cubic
+    mesh.scale.set(
+      targetScale.x * ease,
+      targetScale.y * ease,
+      targetScale.z * ease
+    );
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ── 6. FLOOR PLAN LIGHT/DARK TOGGLE ──
+let fpDark = true;
+function toggleFPTheme() {
+  fpDark = !fpDark;
+  const btn = document.getElementById('fp-theme-btn');
+  if (btn) btn.textContent = fpDark ? '☀️ Light Plan' : '🌙 Dark Plan';
+  openFP();
+}
+
+// Patch openFP to support light mode
+const _origOpenFP = openFP;
+function openFP() {
+  const W=800,H=600,P=38,sc=20,cx=W/2,cy=H/2;
+  const fc=document.getElementById('fp-cv');fc.width=W;fc.height=H;
+  const ctx=fc.getContext('2d');
+  const bg = fpDark ? '#1a1e2e' : '#ffffff';
+  const gridCol = fpDark ? 'rgba(80,100,140,.3)' : 'rgba(180,190,210,.4)';
+  const textCol = fpDark ? 'rgba(140,150,180,.5)' : 'rgba(80,90,120,.7)';
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle=gridCol;ctx.lineWidth=.5;
+  for(let i=-15;i<=15;i++){ctx.beginPath();ctx.moveTo(cx+i*sc,P);ctx.lineTo(cx+i*sc,H-P);ctx.stroke();ctx.beginPath();ctx.moveTo(P,cy+i*sc);ctx.lineTo(W-P,cy+i*sc);ctx.stroke()}
+  ctx.fillStyle=textCol;ctx.font='8px monospace';ctx.textAlign='center';
+  for(let i=-14;i<=14;i+=2){ctx.fillText(i+'m',cx+i*sc,H-P+10);ctx.fillText(i+'m',P-8,cy-i*sc+3)}
+  getRO().forEach(obj=>{
+    if(obj.mesh.userData.hidden)return;
+    const def=OBJ[obj.type];if(!def)return;
+    const m=obj.mesh,ox=cx+m.position.x*sc,oy=cy-m.position.z*sc;
+    const hw=(def.w*m.scale.x*sc)/2,hd=(def.d*m.scale.z*sc)/2;
+    const col='#'+obj.mesh.userData.color.toString(16).padStart(6,'0');
+    ctx.save();ctx.translate(ox,oy);ctx.rotate(-m.rotation.y);
+    ctx.fillStyle=fpDark?col+'cc':col+'99';
+    ctx.strokeStyle=obj.mesh.userData.locked?'#f0c040':col;
+    ctx.lineWidth=1.5;ctx.fillRect(-hw,-hd,hw*2,hd*2);ctx.strokeRect(-hw,-hd,hw*2,hd*2);
+    ctx.fillStyle=fpDark?'rgba(255,255,255,.85)':'rgba(20,20,40,.85)';
+    ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.fillText(def.name,0,0);
+    // Show note on floor plan
+    const note = obj.mesh.userData.note || '';
+    if(note){
+      ctx.fillStyle='rgba(240,192,64,.95)';ctx.font='bold 7px sans-serif';
+      ctx.fillText(note.substring(0,16),0,9);
+    } else {
+      ctx.fillStyle=fpDark?'rgba(240,192,64,.8)':'rgba(150,100,0,.8)';
+      ctx.font='7px monospace';
+      ctx.fillText(`${(def.w*m.scale.x).toFixed(1)}x${(def.d*m.scale.z).toFixed(1)}m`,0,9);
+    }
+    ctx.restore();
+  });
+  // North arrow
+  ctx.save();ctx.translate(W-P-20,P+20);
+  ctx.strokeStyle=fpDark?'rgba(200,210,240,.8)':'rgba(60,80,120,.8)';
+  ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,12);ctx.lineTo(0,-12);ctx.stroke();
+  ctx.fillStyle=fpDark?'rgba(200,210,240,.8)':'rgba(60,80,120,.8)';
+  ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.fillText('N',0,-16);ctx.restore();
+  // Scale bar
+  ctx.fillStyle=fpDark?'rgba(200,210,240,.6)':'rgba(60,80,120,.5)';
+  ctx.fillRect(P,H-P+14,sc*5,3);
+  ctx.fillStyle=fpDark?'rgba(140,150,180,.8)':'rgba(60,80,120,.8)';
+  ctx.font='8px monospace';ctx.textAlign='left';ctx.fillText('0',P,H-P+22);
+  ctx.textAlign='center';ctx.fillText('5m',P+sc*5,H-P+22);
+  // Title
+  ctx.fillStyle=fpDark?'rgba(240,240,255,.7)':'rgba(20,20,60,.8)';
+  ctx.font='bold 11px sans-serif';ctx.textAlign='left';
+  ctx.fillText('Smart Home — '+rooms[curRoom].name,P,16);
+  ctx.fillStyle=fpDark?'rgba(140,150,180,.6)':'rgba(80,90,120,.6)';
+  ctx.font='9px monospace';
+  ctx.fillText('Objects: '+getRO().filter(o=>!o.mesh.userData.hidden).length+'  |  Area: '+document.getElementById('s-area').textContent+'m²',P,27);
+  document.getElementById('fp-modal').classList.add('open');
+}
+
+// ── 7. UZS PRICE DISPLAY ──
+const USD_TO_UZS = 12700; // approximate rate
+function getUZS(usd) {
+  if (!usd) return '';
+  const uzs = usd * USD_TO_UZS;
+  return uzs >= 1000000
+    ? (uzs / 1000000).toFixed(1) + ' mln soʻm'
+    : uzs.toLocaleString() + ' soʻm';
+}
+
+// Patch showCost to also show UZS
+function showCost(obj) {
+  const def = OBJ[obj.type || obj.mesh.userData.defKey];
+  const el = document.getElementById('cost-disp');
+  if (def && def.cost > 0) {
+    el.innerHTML = `💰 ~$${def.cost} <span style="color:var(--gold);font-size:9px">(${getUZS(def.cost)})</span>`;
+  } else {
+    el.textContent = '';
+  }
+}
+
+// ── 8. KEYBOARD SHORTCUT CHEAT SHEET OVERLAY ──
+let cheatSheetVisible = false;
+function toggleCheatSheet() {
+  cheatSheetVisible = !cheatSheetVisible;
+  document.getElementById('cheat-sheet').style.display = cheatSheetVisible ? 'flex' : 'none';
+}
+// Close on any click outside
+document.addEventListener('click', e => {
+  if (cheatSheetVisible && !e.target.closest('#cheat-sheet') && !e.target.closest('#cheat-btn')) {
+    cheatSheetVisible = false;
+    document.getElementById('cheat-sheet').style.display = 'none';
+  }
+});
+
+// ── 9. WALL COLOR INDIVIDUAL PICKER ──
+// Already handled by color swatches — but add a dedicated wall color section
+// that shows current wall color and highlights it in swatches.
+// This is already working through the existing buildSw() function.
+// Enhancement: when a wall is selected, show a "Wall Color" label
+function enhanceWallColorUI(obj) {
+  const isWall = OBJ[obj.type]?.isWall;
+  const colorLabel = document.getElementById('color-section-label');
+  if (colorLabel) {
+    colorLabel.textContent = isWall ? 'Wall Color' : 'Color';
+  }
+}
+
+// ── 10. OBJECT INFO CARD WITH UZS ──
+function showInfoCard(obj) {
+  const def = OBJ[obj.type || obj.mesh.userData.defKey];
+  if (!def) return;
+  const card = document.getElementById('obj-info-card');
+  if (!card) return;
+  const wx = (def.w * obj.mesh.scale.x).toFixed(2);
+  const hy = (def.h * obj.mesh.scale.y).toFixed(2);
+  const dz = (def.d * obj.mesh.scale.z).toFixed(2);
+  card.innerHTML = `
+    <div style="font-size:28px;margin-bottom:4px">${obj.mesh.userData.icon}</div>
+    <div style="font-weight:700;font-size:12px;margin-bottom:2px">${obj.mesh.userData.name}</div>
+    <div style="font-size:10px;color:var(--text2);margin-bottom:4px">${wx}m × ${hy}m × ${dz}m</div>
+    ${def.cost > 0 ? `<div style="font-size:10px;color:var(--gold)">~$${def.cost}</div>
+    <div style="font-size:9px;color:var(--text2)">${getUZS(def.cost)}</div>` : ''}
+    ${obj.mesh.userData.note ? `<div style="font-size:9px;color:var(--accent);margin-top:3px;font-style:italic">"${obj.mesh.userData.note}"</div>` : ''}
+  `;
+  card.style.display = 'block';
+}
+
+// ── 11. SNAP GRID VISUAL OVERLAY ──
+function updateSnapGridVisual() {
+  const canvas2d = document.getElementById('snap-grid-canvas');
+  if (!canvas2d) return;
+  if (!snapOn) { canvas2d.style.display = 'none'; return; }
+  canvas2d.style.display = 'block';
+  canvas2d.width = wrap.clientWidth;
+  canvas2d.height = wrap.clientHeight;
+  const ctx = canvas2d.getContext('2d');
+  ctx.clearRect(0, 0, canvas2d.width, canvas2d.height);
+  // Project grid points through camera
+  ctx.strokeStyle = 'rgba(79,124,255,0.12)';
+  ctx.lineWidth = 1;
+  for (let x = -15; x <= 15; x += snapSzCur) {
+    for (let z = -15; z <= 15; z += snapSzCur) {
+      const v = new THREE.Vector3(x, 0, z).project(camera);
+      const px = (v.x * 0.5 + 0.5) * canvas2d.width;
+      const py = (-v.y * 0.5 + 0.5) * canvas2d.height;
+      if (v.z < 1) {
+        ctx.beginPath();
+        ctx.arc(px, py, 1, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(79,124,255,0.3)';
+        ctx.fill();
+      }
+    }
+  }
+}
+
+// ── 12. EXPORT SCENE SUMMARY PDF (HTML print) ──
+function exportSummary() {
+  const ob = getRO();
+  const walls = ob.filter(o => OBJ[o.type]?.isWall);
+  let wallLen = 0;
+  walls.forEach(w => { const def = OBJ[w.type]; if (def) wallLen += Math.max(def.w * w.mesh.scale.x, def.d * w.mesh.scale.z); });
+  const area = parseFloat(document.getElementById('s-area').textContent) || 0;
+  const budget = ob.reduce((s, o) => s + (OBJ[o.type]?.cost || 0), 0);
+
+  const rows = ob.map(o => {
+    const def = OBJ[o.type]; if (!def) return '';
+    const wx = (def.w * o.mesh.scale.x).toFixed(1);
+    const hy = (def.h * o.mesh.scale.y).toFixed(1);
+    const dz = (def.d * o.mesh.scale.z).toFixed(1);
+    return `<tr><td>${o.mesh.userData.icon} ${def.name}</td><td>${wx}×${hy}×${dz}m</td><td>${o.mesh.userData.note || '—'}</td><td>$${def.cost || 0}</td><td>${getUZS(def.cost)}</td></tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Room Summary</title>
+  <style>body{font-family:Arial,sans-serif;padding:30px;color:#111}h1{font-size:20px;margin-bottom:4px}
+  .meta{font-size:12px;color:#666;margin-bottom:20px}.stats{display:flex;gap:20px;margin-bottom:20px}
+  .stat{background:#f5f5f5;border-radius:8px;padding:10px 16px;text-align:center}
+  .stat-v{font-size:18px;font-weight:700;color:#4f7cff}.stat-l{font-size:11px;color:#888}
+  table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px 10px;border-bottom:1px solid #eee;text-align:left}
+  th{background:#f0f4ff;font-weight:600}.total{font-weight:700;background:#f0f4ff}
+  @media print{body{padding:10px}}</style></head><body>
+  <h1>🏠 ${rooms[curRoom].name} — Room Summary</h1>
+  <div class="meta">Generated: ${new Date().toLocaleDateString()} · Smart Home Designer PRO</div>
+  <div class="stats">
+    <div class="stat"><div class="stat-v">${area.toFixed(1)} m²</div><div class="stat-l">Floor Area</div></div>
+    <div class="stat"><div class="stat-v">${walls.length}</div><div class="stat-l">Walls</div></div>
+    <div class="stat"><div class="stat-v">${ob.length}</div><div class="stat-l">Objects</div></div>
+    <div class="stat"><div class="stat-v">$${budget.toLocaleString()}</div><div class="stat-l">Est. Budget</div></div>
+    <div class="stat"><div class="stat-v">${getUZS(budget)}</div><div class="stat-l">In UZS</div></div>
+  </div>
+  <table><thead><tr><th>Object</th><th>Dimensions</th><th>Note</th><th>USD</th><th>UZS</th></tr></thead>
+  <tbody>${rows}</tbody>
+  <tfoot><tr class="total"><td colspan="3">TOTAL</td><td>$${budget.toLocaleString()}</td><td>${getUZS(budget)}</td></tr></tfoot>
+  </table></body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = rooms[curRoom].name.replace(/\s+/g,'-') + '-summary.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('📄 Summary exported — open in browser to print as PDF', 'success');
+}
+
+// ── 13. PATCH showProps TO SHOW INFO CARD + WALL LABEL ──
+const _origShowProps = showProps;
+function showProps(obj) {
+  _origShowProps(obj);
+  showInfoCard(obj);
+  enhanceWallColorUI(obj);
+}
+
+// ── 14. PATCH addObj TO ANIMATE + LABEL HISTORY ──
+const _baseAddObj = addObj;
+function addObj(type, opts) {
+  const def = OBJ[type]; if (!def) return;
+  histLabels[hIdx + 1] = 'Added ' + def.name;
+  const obj = _baseAddObj(type, opts);
+  if (obj) {
+    // Store target scales for animation
+    obj.mesh.userData._scaleX = obj.mesh.scale.x;
+    obj.mesh.userData._scaleY = obj.mesh.scale.y;
+    obj.mesh.userData._scaleZ = obj.mesh.scale.z;
+    animateIn(obj.mesh);
+  }
+  return obj;
+}
+
+// ── 15. PATCH updateStats TO ALSO UPDATE SNAP GRID ──
+const _baseUpdateStats = updateStats;
+function updateStats() {
+  _baseUpdateStats();
+  updateSnapGridVisual();
+}
+
+// ── PATCH toggleSnap TO SHOW/HIDE GRID VISUAL ──
+const _baseToggleSnap = toggleSnap;
+function toggleSnap() {
+  _baseToggleSnap();
+  updateSnapGridVisual();
+}
+
+// ── INIT v8 FEATURES ──
+function initV8Features() {
+  // Keyboard: Shift+G = Group, Shift+U = Ungroup, ? = cheat sheet
+  document.addEventListener('keydown', function v8Keys(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === '?' || (e.shiftKey && e.key === '/')) { e.preventDefault(); toggleCheatSheet(); }
+    if (e.shiftKey && (e.key === 'G' || e.key === 'g')) { e.preventDefault(); groupSelected(); }
+    if (e.shiftKey && (e.key === 'U' || e.key === 'u')) { e.preventDefault(); ungroupAll(); }
+  });
+  updateSnapGridVisual();
+}
 </script>
 
 <!-- STATS MODAL -->
@@ -1466,5 +1917,76 @@ function initNewFeatures() {
 
 <!-- ALIGNMENT FLASH -->
 <div id="align-flash" style="position:absolute;inset:0;border:2px solid var(--success);border-radius:4px;pointer-events:none;opacity:0;transition:opacity .2s;z-index:45"></div>
+
+<!-- DIMENSION DIALOG -->
+<div id="dim-dialog" style="position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:900">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;max-width:340px;width:90vw">
+    <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;margin-bottom:4px">📐 Set Exact Dimensions</div>
+    <div id="dim-name-lbl" style="font-size:11px;color:var(--text2);margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div style="flex:1"><div style="font-size:9px;color:var(--text2);margin-bottom:3px">WIDTH (m)</div><input id="dim-w-in" type="number" step="0.01" min="0.05" max="20" style="width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:5px 7px;color:var(--text);font-size:12px;outline:none"></div>
+      <div style="flex:1"><div style="font-size:9px;color:var(--text2);margin-bottom:3px">HEIGHT (m)</div><input id="dim-h-in" type="number" step="0.01" min="0.05" max="20" style="width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:5px 7px;color:var(--text);font-size:12px;outline:none"></div>
+      <div style="flex:1"><div style="font-size:9px;color:var(--text2);margin-bottom:3px">DEPTH (m)</div><input id="dim-d-in" type="number" step="0.01" min="0.05" max="20" style="width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:5px 7px;color:var(--text);font-size:12px;outline:none"></div>
+    </div>
+    <div style="display:flex;gap:7px">
+      <button onclick="applyDimDialog()" style="flex:2;padding:7px;border-radius:6px;border:none;background:var(--accent);color:#fff;font-size:11px;font-weight:600;cursor:pointer">✓ Apply</button>
+      <button onclick="closeDimDialog()" style="flex:1;padding:7px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text2);font-size:11px;cursor:pointer">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECTS MODAL -->
+<div id="projects-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:900">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;max-width:440px;width:90vw;max-height:80vh;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px">💾 My Projects</span>
+      <button onclick="saveAsSlot()" style="margin-left:auto;padding:4px 10px;border-radius:6px;border:none;background:var(--success);color:#fff;font-size:10px;font-weight:600;cursor:pointer">+ Save As</button>
+      <button onclick="closeProjectsModal()" style="padding:4px 9px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text2);font-size:10px;cursor:pointer">✕</button>
+    </div>
+    <div id="projects-list" style="flex:1;overflow-y:auto;max-height:50vh"></div>
+  </div>
+</div>
+
+<!-- OBJ INFO CARD (in right panel, injected via JS) -->
+
+<!-- SNAP GRID CANVAS OVERLAY -->
+<canvas id="snap-grid-canvas" style="position:absolute;inset:0;pointer-events:none;z-index:8;display:none"></canvas>
+
+<!-- CHEAT SHEET OVERLAY -->
+<div id="cheat-sheet" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:850;background:rgba(0,0,0,.6)">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:560px;width:90vw;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div style="grid-column:span 2;display:flex;align-items:center;margin-bottom:4px">
+      <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px">⌨️ Keyboard Shortcuts</span>
+      <button onclick="toggleCheatSheet()" style="margin-left:auto;background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2);cursor:pointer;font-size:11px">✕ Close</button>
+    </div>
+    <div>
+      <div style="font-size:9px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Camera & View</div>
+      <div style="font-size:10px;color:var(--text2);line-height:2"><kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">Left drag</kbd> Rotate &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">Right drag</kbd> Pan<br>
+      <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">Scroll</kbd> Zoom &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">F</kbd> Focus selected<br>
+      <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">T</kbd> Dark/light theme &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">F11</kbd> Fullscreen</div>
+    </div>
+    <div>
+      <div style="font-size:9px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Objects</div>
+      <div style="font-size:10px;color:var(--text2);line-height:2">
+      <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">Ctrl+D</kbd> Duplicate &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">Del</kbd> Delete<br>
+      <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">L</kbd> Lock &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">V</kbd> Hide/show<br>
+      <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">Ctrl+C/V</kbd> Copy/Paste &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">Arrows</kbd> Nudge</div>
+    </div>
+    <div>
+      <div style="font-size:9px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Quick Add Objects</div>
+      <div style="font-size:10px;color:var(--text2);line-height:2">
+      <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--gold);font-size:9px">S</kbd> Sofa &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--gold);font-size:9px">B</kbd> Bed &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--gold);font-size:9px">T</kbd> Table<br>
+      <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--gold);font-size:9px">C</kbd> Chair &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--gold);font-size:9px">D</kbd> Desk &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--gold);font-size:9px">P</kbd> Plant<br>
+      <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--gold);font-size:9px">1</kbd> Wall H &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--gold);font-size:9px">2</kbd> Wall V &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--gold);font-size:9px">R</kbd> Rug</div>
+    </div>
+    <div>
+      <div style="font-size:9px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Tools & Editing</div>
+      <div style="font-size:10px;color:var(--text2);line-height:2">
+      <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">Ctrl+Z/Y</kbd> Undo/Redo<br>
+      <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">G</kbd> Snap &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">M</kbd> Measure<br>
+      <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">Shift+G</kbd> Group &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">?</kbd> This sheet</div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
