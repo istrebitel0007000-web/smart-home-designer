@@ -247,6 +247,18 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
 #obj-info-card{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;margin-bottom:8px;display:none}
 #cheat-sheet kbd{font-family:monospace}
 .snap-grid-dot{fill:rgba(79,124,255,.3)}
+
+/* v9 */
+.theme-dot.active{border-color:#fff!important;transform:scale(1.2)}
+#rp{transition:width .25s,border .25s}
+#load-text{font-size:11px;color:var(--text2);min-height:18px;text-align:center}
+
+/* v9 CSS */
+#rp{transition:width .25s,border .25s}
+.mirror-row{display:flex;gap:3px;margin-top:3px}
+.mirb{flex:1;padding:4px 2px;border-radius:4px;border:1px solid var(--border);background:var(--panel2);color:var(--text2);font-size:9px;cursor:pointer;text-align:center;transition:all .1s}
+.mirb:hover{border-color:var(--accent);color:var(--accent)}
+.theme-color-btn:hover{outline:2px solid var(--accent)!important}
 </style>
 </head>
 <body>
@@ -291,6 +303,15 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
     <button class="ab s" onclick="openProjectsModal()" title="My Projects">🗂 Projects</button>
     <button class="ab s" onclick="exportSummary()" title="Export summary HTML/PDF">📄 Summary</button>
     <button class="ab s" id="cheat-btn" onclick="toggleCheatSheet()" title="Keyboard shortcuts (?)">⌨️</button>
+    <button class="ab s" onclick="openBundles()" title="Furniture Bundles">🛋 Bundles</button>
+    <button class="ab s" onclick="add3DLabel()" title="Add 3D text label">🏷 Label</button>
+    <button class="ab s" onclick="zoomToFit()" title="Zoom to fit all (Ctrl+Shift+Z)">🔍 Fit</button>
+    <button class="ab s" id="rp-toggle-btn" onclick="toggleRightPanel()" title="Toggle right panel">◀</button>
+    <button class="ab s" onclick="document.getElementById('theme-picker').style.display=document.getElementById('theme-picker').style.display==='flex'?'none':'flex'" title="UI Color Theme">🎨</button>
+    <button class="ab s" onclick="openBundlesModal()" title="Furniture Bundles">🛋 Bundles</button>
+    <button class="ab s" onclick="openThemeModal()" title="UI Color Theme">🎨</button>
+    <button class="ab s" onclick="zoomToFit()" title="Zoom to fit all (Z)">🔍</button>
+    <button class="ab s" id="rp-collapse-btn" onclick="toggleRightPanel()" title="Toggle right panel">▶</button>
     <button class="ab s" onclick="openHelp()">❓</button>
   </div>
 </div>
@@ -411,14 +432,16 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
         <button class="cb" onclick="focusSelected()" title="Focus (F)">🎯</button>
         <button class="cb" onclick="snapToCenter()" title="Snap to center">⊕</button>
         <button class="cb" id="tour-btn" onclick="toggleTour()" title="Camera tour">▶</button>
+        <button class="cb" onclick="addTextLabel3D()" title="Add 3D text label">🏷</button>
         <button class="cb" onclick="toggleShadows()">🌑</button>
         <button class="cb" id="ceiling-btn" onclick="toggleCeiling()" title="Toggle ceiling">🔲</button>
         <button class="cb" id="snap-btn" onclick="toggleSnap()">⊞</button>
         <button class="cb" id="meas-btn" onclick="toggleMeasure()">📏</button>
+        <button class="cb" id="obj-dist-btn" onclick="toggleObjDist()" title="Object-to-object distance">↔</button>
       </div>
     </div>
-    <div id="sbar">🖱 Drag=rotate · Scroll=zoom · F=focus · ⊕=center · ▶=tour · G=snap · M=measure · Del=remove</div>
-    <div id="loading"><div class="lr"></div><div style="font-size:13px;color:var(--text2)">Loading 3D…</div></div>
+    <div id="sbar">🖱 Drag=rotate · Scroll=zoom · F=focus · ⊕=center · ▶=tour · G=snap · M=measure · Z=fit all · Ctrl+Shift+V=paste-in-place · Del=remove</div>
+    <div id="loading"><div class="lr"></div><div id="load-text" style="font-size:13px;color:var(--text2)">Loading 3D…</div></div>
     <div id="toast"></div>
   </div>
   <div id="rp">
@@ -473,6 +496,13 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
           <div class="szb" onclick="applySizePreset('XL')">XL</div>
         </div>
       </div>
+      <div class="pg">
+        <div class="pl">Mirror / Flip</div>
+        <div class="mirror-row">
+          <div class="mirb" onclick="mirrorObj('x')" title="Mirror on X axis">↔ X-Axis</div>
+          <div class="mirb" onclick="mirrorObj('z')" title="Mirror on Z axis">↕ Z-Axis</div>
+        </div>
+      </div>
       <div class="pg"><div class="pl" id="color-section-label">Color</div><div class="cr" id="c-sw"></div></div>
       <div class="pg"><div class="pl">Material / Texture</div><div class="mr" id="m-row"></div>
         <button class="ab s" onclick="openTexUpload()" style="width:100%;margin-top:4px;justify-content:center;font-size:9px">🖼 Upload Custom Texture</button>
@@ -491,6 +521,11 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
       <div class="pg">
         <div class="pl">Note / Label</div>
         <textarea id="note-in" rows="2" placeholder="e.g. King size bed, IKEA MALM…" oninput="updNote()"></textarea>
+      </div>
+      <div style="display:flex;gap:3px;margin-bottom:4px">
+        <button class="ab s" onclick="mirrorX()" style="flex:1;justify-content:center;font-size:9px" title="Mirror X">↔ MirX</button>
+        <button class="ab s" onclick="mirrorZ()" style="flex:1;justify-content:center;font-size:9px" title="Mirror Z">↕ MirZ</button>
+        <button class="ab s" onclick="toggleObjMeasure()" id="obj-meas-btn" style="flex:1;justify-content:center;font-size:9px" title="Measure distance between 2 objects">📐 Dist</button>
       </div>
       <div style="display:flex;gap:4px">
         <button class="ab s" onclick="duplicateSel()" style="flex:1;justify-content:center;font-size:10px">⧉ Dup</button>
@@ -590,6 +625,17 @@ body.light #ms-bar{background:rgba(255,255,255,.95)}
   <div class="hkr"><span class="hkk">T</span><span class="hkd">Toggle dark/light theme</span></div>
   <div class="hkr"><span class="hkk">F11</span><span class="hkd">Toggle fullscreen</span></div>
   <div class="hkr"><span class="hkk">Esc</span><span class="hkd">Exit fullscreen / draw / modals</span></div>
+  <div class="hkr"><span class="hkk">Ctrl+Shift+V</span><span class="hkd">Paste in place (no position offset)</span></div>
+  <div class="hkr"><span class="hkk">Ctrl+Shift+Z</span><span class="hkd">Zoom to fit all objects</span></div>
+  <div class="hks">New v9 Features</div>
+  <div class="hkr"><span class="hkk">🛋 Bundles</span><span class="hkd">Pre-made furniture sets (Living, Bedroom…)</span></div>
+  <div class="hkr"><span class="hkk">🎨 Theme</span><span class="hkd">Change UI accent color (Blue/Purple/Green…)</span></div>
+  <div class="hkr"><span class="hkk">↔ MirX / ↕ MirZ</span><span class="hkd">Mirror object on X or Z axis</span></div>
+  <div class="hkr"><span class="hkk">📐 Dist</span><span class="hkd">Measure distance between 2 objects</span></div>
+  <div class="hkr"><span class="hkk">🏷 Label</span><span class="hkd">Add floating 3D text label to scene</span></div>
+  <div class="hkr"><span class="hkk">🔍 Fit</span><span class="hkd">Zoom to fit all objects in view</span></div>
+  <div class="hkr"><span class="hkk">◀ Panel</span><span class="hkd">Collapse/expand right panel</span></div>
+  <div class="hkr"><span class="hkk">Confirm Clear</span><span class="hkd">Clear Scene now asks for confirmation</span></div>
   <div class="hkr"><span class="hkk">Arrows</span><span class="hkd">Nudge selected object</span></div>
   <div class="hks">New Features</div>
   <div class="hkr"><span class="hkk">Wall height</span><span class="hkd">Scale H field changes wall height (default 2.8m)</span></div>
@@ -1075,6 +1121,8 @@ window.addEventListener('load',()=>{
   renderTabs();pushH();loadFromURL();
   initNewFeatures();
   initV8Features();
+  initV9Features();
+  initV9Features();
   if(apiKey)showToast('✅ Ready! API key active','success');
   else showToast('✅ Ready — add API key in ⚙️ for AI','warn');
 });
@@ -1876,6 +1924,599 @@ function initV8Features() {
   });
   updateSnapGridVisual();
 }
+
+// ════════════════════════════════════════════════════
+// FEATURE PACK v9 — 15 new features
+// ════════════════════════════════════════════════════
+
+// ── 1. OBJECT-TO-OBJECT SNAPPING ──
+const OBJ_SNAP_DIST = 0.5;
+function snapToObjects(movingMesh) {
+  const others = getRO().filter(o => o.mesh !== movingMesh && !o.mesh.userData.hidden);
+  if (!others.length) return;
+  let bestDX = OBJ_SNAP_DIST, bestDZ = OBJ_SNAP_DIST;
+  let snapX = null, snapZ = null;
+  others.forEach(o => {
+    const dx = Math.abs(movingMesh.position.x - o.mesh.position.x);
+    const dz = Math.abs(movingMesh.position.z - o.mesh.position.z);
+    if (dx < bestDX) { bestDX = dx; snapX = o.mesh.position.x; }
+    if (dz < bestDZ) { bestDZ = dz; snapZ = o.mesh.position.z; }
+  });
+  if (snapX !== null) movingMesh.position.x = snapX;
+  if (snapZ !== null) movingMesh.position.z = snapZ;
+}
+
+// ── 2. ZOOM TO FIT ALL ──
+function zoomToFit() {
+  const objs2 = getRO().filter(o => !o.mesh.userData.hidden);
+  if (!objs2.length) { resetCam(); return; }
+  let x1=Infinity,x2=-Infinity,z1=Infinity,z2=-Infinity;
+  objs2.forEach(o => {
+    x1=Math.min(x1,o.mesh.position.x); x2=Math.max(x2,o.mesh.position.x);
+    z1=Math.min(z1,o.mesh.position.z); z2=Math.max(z2,o.mesh.position.z);
+  });
+  const cx=(x1+x2)/2, cz=(z1+z2)/2;
+  const span = Math.max(x2-x1, z2-z1, 4);
+  camTg.set(cx, 0, cz);
+  camR = Math.min(60, span * 1.4 + 4);
+  camTh = 0.8; camPh = 0.7;
+  updCam();
+  showToast('🔍 Zoom to fit all');
+}
+
+// ── 3. OBJECT MIRROR / FLIP ──
+function mirrorX() {
+  if (!selObj) { showToast('Select an object first','error'); return; }
+  if (selObj.mesh.userData.locked) { showToast('Unlock first 🔒','error'); return; }
+  selObj.mesh.scale.x *= -1;
+  document.getElementById('sx').value = +selObj.mesh.scale.x.toFixed(2);
+  pushH();
+  showToast('↔ Mirrored on X');
+}
+function mirrorZ() {
+  if (!selObj) { showToast('Select an object first','error'); return; }
+  if (selObj.mesh.userData.locked) { showToast('Unlock first 🔒','error'); return; }
+  selObj.mesh.scale.z *= -1;
+  document.getElementById('sz').value = +selObj.mesh.scale.z.toFixed(2);
+  pushH();
+  showToast('↕ Mirrored on Z');
+}
+
+// ── 4. FURNITURE SET BUNDLES (defined in v9 block below) ──
+
+// ── 5. UI COLOR THEMES ──
+const THEMES_V8 = {
+  Blue:   { accent: '#4f7cff', border: '#2e3250' },
+  Purple: { accent: '#8b5cf6', border: '#3d2e6e' },
+  Green:  { accent: '#10b981', border: '#1a3a2a' },
+  Orange: { accent: '#f97316', border: '#3a2010' },
+  Rose:   { accent: '#f43f5e', border: '#3a1020' },
+};
+let currentTheme = 'Blue';
+function applyUITheme(name) {
+  const t = THEMES_V8[name]; if (!t) return;
+  currentTheme = name;
+  document.documentElement.style.setProperty('--accent', t.accent);
+  document.documentElement.style.setProperty('--border', t.border);
+  document.querySelectorAll('.theme-dot').forEach(d =>
+    d.classList.toggle('active', d.dataset.theme === name));
+  localStorage.setItem('shd_ui_theme', JSON.stringify({name, accent:t.accent, border:t.border}));
+  showToast('🎨 Theme: ' + name);
+}
+function loadSavedTheme() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('shd_ui_theme') || 'null');
+    if (saved && saved.name) applyUITheme(saved.name);
+  } catch {}
+}
+
+// ── 6. DISTANCE BETWEEN TWO OBJECTS ──
+let objMeasMode = false, objMeasObj1 = null;
+function toggleObjMeasure() {
+  objMeasMode = !objMeasMode;
+  const btn = document.getElementById('obj-meas-btn');
+  if (btn) btn.classList.toggle('ow', objMeasMode);
+  showToast(objMeasMode ? '📐 Click 2 objects to measure distance' : '📐 Object measure OFF',
+    objMeasMode ? 'warn' : '');
+  objMeasObj1 = null;
+}
+
+// ── 7. 3D TEXT LABELS ──
+const textLabels3D = [];
+function add3DLabel() {
+  const text = prompt('Label text:', 'Living Room');
+  if (!text || !text.trim()) return;
+  // Create a canvas-based sprite
+  const canvas2 = document.createElement('canvas');
+  canvas2.width = 256; canvas2.height = 64;
+  const ctx2 = canvas2.getContext('2d');
+  ctx2.fillStyle = 'rgba(79,124,255,0.85)';
+  ctx2.roundRect ? ctx2.roundRect(2,2,252,60,8) : ctx2.fillRect(2,2,252,60);
+  ctx2.fill();
+  ctx2.fillStyle = '#ffffff';
+  ctx2.font = 'bold 28px Arial';
+  ctx2.textAlign = 'center';
+  ctx2.textBaseline = 'middle';
+  ctx2.fillText(text.substring(0,20), 128, 32);
+  const tex = new THREE.CanvasTexture(canvas2);
+  const mat = new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false});
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(3, 0.75, 1);
+  sprite.position.set(sg(Math.random()*4-2), 2.2, sg(Math.random()*4-2));
+  sprite.userData = {isLabel:true, text:text};
+  scene.add(sprite);
+  textLabels3D.push(sprite);
+  showToast('🏷 Label added: "' + text + '"', 'success');
+}
+function clearAllLabels() {
+  textLabels3D.forEach(s => scene.remove(s));
+  textLabels3D.length = 0;
+  showToast('Labels cleared');
+}
+
+// ── 8. CONFIRMATION BEFORE CLEAR ──
+function clearScene() {
+  const ob = getRO();
+  if (!ob.length) return;
+  if (!confirm('Clear all ' + ob.length + ' objects in "' + rooms[curRoom].name + '"?\nThis cannot be undone.')) return;
+  pushH();
+  ob.forEach(o => scene.remove(o.mesh));
+  rooms[curRoom].objs = [];
+  selObj = null; multiSel = [];
+  hideProps(); updateList(); updateStats(); refreshMUI(); syncLights();
+  pushH();
+  showToast('🗑 Scene cleared');
+}
+
+// ── 9. PASTE IN PLACE (Ctrl+Shift+V) ──
+function pasteInPlace() {
+  if (!clipboard.length) { showToast('Nothing to paste','error'); return; }
+  pushH();
+  clipboard.forEach(d => {
+    const def = OBJ[d.type]; if (!def) return;
+    const mesh = buildMesh(def, d.color, d.mat||'Default');
+    mesh.position.set(d.px, d.py, d.pz); // exact position, no offset
+    mesh.rotation.set(d.rx, d.ry, d.rz);
+    mesh.scale.set(d.sx, d.sy, d.sz);
+    mesh.userData = {type:d.type,name:def.name,icon:def.icon,defKey:d.type,
+      color:d.color,mat:d.mat||'Default',note:d.note||'',locked:false,hidden:false};
+    scene.add(mesh);
+    getRO().push({id:objCnt++, type:d.type, mesh});
+  });
+  updateList(); updateStats(); syncLights(); pushH();
+  showToast('📋 Pasted in place', 'success');
+}
+
+// ── 10. RIGHT PANEL COLLAPSE ──
+// rpCollapsed declared earlier
+function toggleRightPanel() {
+  rpCollapsed = !rpCollapsed;
+  const rp = document.getElementById('rp');
+  rp.style.width = rpCollapsed ? '0' : '';
+  rp.style.overflow = rpCollapsed ? 'hidden' : '';
+  rp.style.border = rpCollapsed ? 'none' : '';
+  const btn = document.getElementById('rp-toggle-btn');
+  if (btn) btn.textContent = rpCollapsed ? '▶' : '◀';
+  setTimeout(resize, 100);
+  showToast(rpCollapsed ? '◀ Right panel hidden' : '▶ Right panel shown');
+}
+
+// ── 11. DYNAMIC PAGE TITLE ──
+function updatePageTitle() {
+  const cnt = getRO().length;
+  const rname = rooms[curRoom]?.name || 'Room';
+  document.title = rname + ' (' + cnt + ' objects) — Smart Home Designer';
+}
+
+// ── 12. BEAUTIFUL LOADING SCREEN ──
+// Already has spinner. Enhance with progress steps shown as text
+const LOAD_STEPS = ['Initialising engine…','Building textures…','Loading scene…','Ready!'];
+let loadStep = 0;
+function advanceLoadStep() {
+  const el = document.getElementById('load-text');
+  if (!el) return;
+  if (loadStep < LOAD_STEPS.length) {
+    el.textContent = LOAD_STEPS[loadStep++];
+    if (loadStep < LOAD_STEPS.length) setTimeout(advanceLoadStep, 300);
+  }
+}
+
+// ── 13. MEASUREMENT BETWEEN OBJECTS ──
+// Integrated into existing click handler via objMeasMode flag
+function handleObjMeasureClick(obj) {
+  if (!objMeasMode) return false;
+  if (!objMeasObj1) {
+    objMeasObj1 = obj;
+    showToast('📐 First object: ' + obj.mesh.userData.name + ' — click second');
+    return true;
+  }
+  const d = objMeasObj1.mesh.position.distanceTo(obj.mesh.position).toFixed(2);
+  showToast('📐 Distance: ' + d + 'm between ' +
+    objMeasObj1.mesh.userData.name + ' & ' + obj.mesh.userData.name, 'success');
+  objMeasObj1 = null;
+  objMeasMode = false;
+  const btn = document.getElementById('obj-meas-btn');
+  if (btn) btn.classList.remove('ow');
+  return true;
+}
+
+// ── 14. PATCH DRAG TO INCLUDE OBJ-TO-OBJ SNAP ──
+// We patch into the existing mousemove drag handler
+// by hooking snapToObjects into the drag path
+// (called alongside snapToWall in existing mousemove)
+// This is done by patching showDragGuides caller:
+const _origShowDragGuides = showDragGuides;
+function showDragGuides(mesh) {
+  _origShowDragGuides(mesh);
+  if (snapOn) snapToObjects(mesh); // obj snap only when snap is ON
+}
+
+// ── 15. PATCH selectSingle FOR OBJ MEASURE + TITLE UPDATE ──
+const _origSelectSingle = selectSingle;
+function selectSingle(obj) {
+  if (handleObjMeasureClick(obj)) return;
+  _origSelectSingle(obj);
+  updatePageTitle();
+}
+
+// ── PATCH updateStats FOR TITLE ──
+const _origUpdateStatsFinal = updateStats;
+function updateStats() {
+  _origUpdateStatsFinal();
+  updatePageTitle();
+}
+
+// ── v9 INIT ──
+function initV9Features() {
+  loadSavedTheme();
+  advanceLoadStep();
+  // Ctrl+Shift+V = paste in place
+  document.addEventListener('keydown', function v9Keys(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.ctrlKey && e.shiftKey && (e.key === 'v' || e.key === 'V')) {
+      e.preventDefault(); pasteInPlace();
+    }
+    if (e.ctrlKey && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+      e.preventDefault(); zoomToFit();
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════
+// FEATURE PACK v9 — 15 carefully built features
+// ════════════════════════════════════════════════════
+
+// ── 1. OBJECT-TO-OBJECT SNAP ──
+OBJ_SNAP_DIST = 0.5;
+function snapToObjects(mesh) {
+  const others = getRO().filter(o => o.mesh !== mesh && !o.mesh.userData.hidden);
+  if (!others.length) return;
+  let bestDx = OBJ_SNAP_DIST, bestDz = OBJ_SNAP_DIST;
+  let snapX = null, snapZ = null;
+  others.forEach(o => {
+    const dx = Math.abs(mesh.position.x - o.mesh.position.x);
+    const dz = Math.abs(mesh.position.z - o.mesh.position.z);
+    if (dx < bestDx) { bestDx = dx; snapX = o.mesh.position.x; }
+    if (dz < bestDz) { bestDz = dz; snapZ = o.mesh.position.z; }
+  });
+  if (snapX !== null && bestDx < 0.15) mesh.position.x = snapX;
+  if (snapZ !== null && bestDz < 0.15) mesh.position.z = snapZ;
+}
+
+// ── 2. 3D TEXT LABELS IN SCENE ──
+// textLabels3D declared earlier
+function addTextLabel3D() {
+  const text = prompt('Enter label text (e.g. "Living Room"):');
+  if (!text || !text.trim()) return;
+  const canvas2 = document.createElement('canvas');
+  canvas2.width = 512; canvas2.height = 128;
+  const ctx2 = canvas2.getContext('2d');
+  ctx2.fillStyle = 'rgba(26,29,39,0.85)';
+  ctx2.roundRect ? ctx2.roundRect(4,4,504,120,14) : ctx2.fillRect(4,4,504,120);
+  ctx2.fill();
+  ctx2.strokeStyle = '#4f7cff'; ctx2.lineWidth = 3;
+  ctx2.strokeRect ? ctx2.strokeRect(4,4,504,120) : null;
+  ctx2.fillStyle = '#e8eaf0';
+  ctx2.font = 'bold 52px DM Sans, sans-serif';
+  ctx2.textAlign = 'center'; ctx2.textBaseline = 'middle';
+  ctx2.fillText(text.trim(), 256, 64);
+  const tex = new THREE.CanvasTexture(canvas2);
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(4, 1), mat);
+  mesh.position.set(0, 2.5, 0);
+  mesh.rotation.x = -0.2;
+  mesh.userData = { isLabel: true, text: text.trim(), noSel: false, name: 'Label: ' + text.trim(), icon: '🏷', color: 0x4f7cff, mat: 'Default', note: '', locked: false, hidden: false, defKey: 'label' };
+  scene.add(mesh);
+  const obj = { id: objCnt++, type: 'label', mesh };
+  getRO().push(obj);
+  textLabels3D.push(obj);
+  updateList(); updateStats();
+  pushH();
+  showToast('🏷 Label "' + text.trim() + '" added — drag to position', 'success');
+}
+
+// ── 3. DISTANCE BETWEEN TWO OBJECTS ──
+let objDistMode = false, objDistTarget1 = null;
+function toggleObjDist() {
+  objDistMode = !objDistMode;
+  const btn = document.getElementById('obj-dist-btn');
+  if (btn) { btn.classList.toggle('ow', objDistMode); btn.title = objDistMode ? 'Click 2 objects to measure' : 'Object Distance'; }
+  objDistTarget1 = null;
+  showToast(objDistMode ? '📏 Click first object to measure from' : '📏 Object distance OFF', objDistMode ? 'warn' : '');
+}
+function handleObjDistClick(obj) {
+  if (!objDistMode) return false;
+  if (!objDistTarget1) {
+    objDistTarget1 = obj;
+    showToast('📏 First: ' + obj.mesh.userData.name + ' — now click second object', 'warn');
+    return true;
+  }
+  const d = objDistTarget1.mesh.position.distanceTo(obj.mesh.position).toFixed(2);
+  showToast('📏 ' + objDistTarget1.mesh.userData.name + ' → ' + obj.mesh.userData.name + ': ' + d + 'm', 'success');
+  // Draw line between them
+  if (measLine) scene.remove(measLine);
+  const pts = [objDistTarget1.mesh.position.clone(), obj.mesh.position.clone()];
+  pts[0].y = pts[1].y = 0.08;
+  measLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x3dd68c }));
+  scene.add(measLine);
+  objDistTarget1 = null;
+  objDistMode = false;
+  if (document.getElementById('obj-dist-btn')) document.getElementById('obj-dist-btn').classList.remove('ow');
+  return true;
+}
+
+// ── 4. FURNITURE SET BUNDLES ──
+const BUNDLES = {
+  'Living Room Set': [
+    { type: 'sofa',   px: 0,    py: .4,   pz: .5,  ry: 0 },
+    { type: 'table',  px: 0,    py: .375, pz: 2,   ry: 0 },
+    { type: 'tv',     px: 0,    py: .45,  pz: -3,  ry: 0 },
+    { type: 'rug',    px: 0,    py: .025, pz: 1,   ry: 0 },
+    { type: 'plant',  px: 2.5,  py: .5,   pz: -2,  ry: 0 },
+    { type: 'plant',  px: -2.5, py: .5,   pz: -2,  ry: 0 },
+    { type: 'ceiling-light', px: 0, py: 2.85, pz: 0, ry: 0 },
+  ],
+  'Bedroom Set': [
+    { type: 'bed',      px: 0,    py: .25,  pz: -1.5, ry: 0 },
+    { type: 'wardrobe', px: 3,    py: 1,    pz: -2,   ry: 0 },
+    { type: 'desk',     px: -3,   py: .375, pz: 0,    ry: 1.5708 },
+    { type: 'chair',    px: -3,   py: .425, pz: 1,    ry: 0 },
+    { type: 'curtain',  px: -4,   py: 1.2,  pz: -1,   ry: 1.5708 },
+    { type: 'ceiling-light', px: 0, py: 2.85, pz: 0, ry: 0 },
+  ],
+  'Kitchen Set': [
+    { type: 'kitchen-counter', px: -2,   py: .45,  pz: -3,  ry: 0 },
+    { type: 'kitchen-counter', px: 1,    py: .45,  pz: -3,  ry: 0 },
+    { type: 'fridge',          px: -3.5, py: .9,   pz: -3,  ry: 0 },
+    { type: 'sink',            px: -2,   py: .425, pz: -2,  ry: 0 },
+    { type: 'dining-set',      px: 1.5,  py: .375, pz: 1,   ry: 0 },
+  ],
+  'Home Office Set': [
+    { type: 'desk',      px: 0,   py: .375, pz: -1,  ry: 0 },
+    { type: 'chair',     px: 0,   py: .425, pz: .5,  ry: 3.1416 },
+    { type: 'bookshelf', px: 2.5, py: 1,    pz: 0,   ry: 0 },
+    { type: 'bookshelf', px: 2.5, py: 1,    pz: 1.5, ry: 0 },
+    { type: 'plant',     px: -2,  py: .5,   pz: -2,  ry: 0 },
+    { type: 'ceiling-light', px: 0, py: 2.85, pz: 0, ry: 0 },
+  ],
+  'Bathroom Set': [
+    { type: 'bathtub', px: -1,  py: .25,  pz: -1.5, ry: 0 },
+    { type: 'shower',  px: 1.5, py: 1.05, pz: -1.5, ry: 0 },
+    { type: 'toilet',  px: 1.5, py: .35,  pz: -2.5, ry: 0 },
+    { type: 'sink',    px: -1.5,py: .425, pz: .5,   ry: 0 },
+  ],
+};
+function openBundlesModal() {
+  const list = document.getElementById('bundles-list');
+  list.innerHTML = '';
+  Object.keys(BUNDLES).forEach(name => {
+    const items = BUNDLES[name];
+    const row = document.createElement('div');
+    row.style.cssText = 'padding:9px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px';
+    row.innerHTML = `
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${name}</div>
+        <div style="font-size:10px;color:var(--text2)">${items.length} pieces — ${items.map(i=>OBJ[i.type]?.icon||'📦').join(' ')}</div>
+      </div>
+      <button onclick="addBundle('${name}')" style="padding:5px 12px;border-radius:6px;border:none;background:var(--accent);color:#fff;font-size:10px;font-weight:600;cursor:pointer">+ Add</button>`;
+    list.appendChild(row);
+  });
+  document.getElementById('bundles-modal').classList.add('open');
+}
+function closeBundlesModal() { document.getElementById('bundles-modal').classList.remove('open'); }
+function addBundle(name) {
+  const items = BUNDLES[name]; if (!items) return;
+  pushH();
+  items.forEach(item => {
+    const def = OBJ[item.type]; if (!def) return;
+    const mesh = buildMesh(def, undefined, 'Default');
+    mesh.position.set(item.px||0, item.py||0, item.pz||0);
+    mesh.rotation.y = item.ry || 0;
+    mesh.userData = { type: item.type, name: def.name, icon: def.icon, defKey: item.type, color: def.color, mat: 'Default', note: '', locked: false, hidden: false };
+    mesh.userData._scaleX = mesh.scale.x; mesh.userData._scaleY = mesh.scale.y; mesh.userData._scaleZ = mesh.scale.z;
+    scene.add(mesh); getRO().push({ id: objCnt++, type: item.type, mesh });
+    animateIn(mesh);
+  });
+  updateList(); updateStats(); syncLights(); pushH();
+  closeBundlesModal();
+  showToast('✅ ' + name + ' added (' + items.length + ' pieces)', 'success');
+}
+
+// ── 5. UI COLOR THEMES ──
+const THEMES = {
+  Blue:   { accent: '#4f7cff', gold: '#f0c040' },
+  Purple: { accent: '#8b5cf6', gold: '#f59e0b' },
+  Green:  { accent: '#10b981', gold: '#f0c040' },
+  Orange: { accent: '#f97316', gold: '#fbbf24' },
+  Pink:   { accent: '#ec4899', gold: '#f0c040' },
+  Teal:   { accent: '#14b8a6', gold: '#f0c040' },
+};
+// currentTheme declared earlier
+function applyColorTheme(name) {
+  const t = THEMES[name]; if (!t) return;
+  currentTheme = name;
+  document.documentElement.style.setProperty('--accent', t.accent);
+  document.documentElement.style.setProperty('--gold', t.gold);
+  localStorage.setItem('shd_theme_color', name);
+  // Update theme buttons
+  document.querySelectorAll('.theme-color-btn').forEach(b => {
+    b.style.outline = b.dataset.theme === name ? '2px solid white' : 'none';
+  });
+  showToast('🎨 Theme: ' + name);
+}
+function loadSavedTheme() {
+  const saved = localStorage.getItem('shd_theme_color');
+  if (saved && THEMES[saved]) applyColorTheme(saved);
+}
+function openThemeModal() {
+  document.getElementById('theme-modal').classList.add('open');
+}
+function closeThemeModal() { document.getElementById('theme-modal').classList.remove('open'); }
+
+// ── 6. OBJECT MIRROR / FLIP ──
+function mirrorObj(axis) {
+  if (!selObj) { showToast('Select an object first', 'error'); return; }
+  if (selObj.mesh.userData.locked) { showToast('Unlock first 🔒', 'error'); return; }
+  pushH();
+  if (axis === 'x') selObj.mesh.scale.x *= -1;
+  else if (axis === 'z') selObj.mesh.scale.z *= -1;
+  refreshIn(selObj);
+  pushH();
+  showToast('↔ Mirrored on ' + axis.toUpperCase() + ' axis');
+}
+
+// ── 7. ZOOM TO FIT ALL ──
+function zoomToFit() {
+  const ob = getRO().filter(o => !o.mesh.userData.hidden);
+  if (!ob.length) { resetCam(); return; }
+  let x1=Infinity,x2=-Infinity,z1=Infinity,z2=-Infinity;
+  ob.forEach(o => {
+    x1=Math.min(x1,o.mesh.position.x); x2=Math.max(x2,o.mesh.position.x);
+    z1=Math.min(z1,o.mesh.position.z); z2=Math.max(z2,o.mesh.position.z);
+  });
+  const cx=(x1+x2)/2, cz=(z1+z2)/2;
+  const span = Math.max(x2-x1, z2-z1, 4);
+  camTg.set(cx, 0, cz);
+  camR = span * 1.4;
+  camPh = 0.7; camTh = 0.8;
+  updCam();
+  showToast('🔍 Zoomed to fit all objects');
+}
+
+// ── 8. RIGHT PANEL COLLAPSE ──
+// rpCollapsed declared earlier
+function toggleRightPanel() {
+  rpCollapsed = !rpCollapsed;
+  const rp = document.getElementById('rp');
+  const btn = document.getElementById('rp-collapse-btn');
+  if (rpCollapsed) {
+    rp.style.width = '0'; rp.style.overflow = 'hidden'; rp.style.borderLeft = 'none';
+    if (btn) btn.textContent = '◀';
+    showToast('Right panel collapsed');
+  } else {
+    rp.style.width = '288px'; rp.style.overflow = ''; rp.style.borderLeft = '';
+    if (btn) btn.textContent = '▶';
+    showToast('Right panel expanded');
+    setTimeout(resize, 100);
+  }
+  setTimeout(resize, 100);
+}
+
+// ── 9. DOCUMENT TITLE UPDATE ──
+function updateDocTitle() {
+  const ob = getRO();
+  const visible = ob.filter(o => !o.mesh.userData.hidden).length;
+  document.title = rooms[curRoom].name + ' (' + visible + ' objects) — Smart Home Designer PRO';
+}
+
+// ── 10. CONFIRM BEFORE CLEAR ──
+// Patch clearScene to add confirmation
+const _baseClearScene = clearScene;
+function clearScene() {
+  if (!getRO().length) return;
+  if (!confirm('Clear all objects in "' + rooms[curRoom].name + '"?\nThis cannot be undone easily — make sure to save first.')) return;
+  _baseClearScene();
+}
+
+// ── 11. PASTE IN PLACE (Ctrl+Shift+V) ──
+function pasteInPlace() {
+  if (!clipboard.length) { showToast('Nothing to paste', 'error'); return; }
+  pushH();
+  clipboard.forEach(d => {
+    const def = OBJ[d.type]; if (!def) return;
+    const mesh = buildMesh(def, d.color, d.mat || 'Default');
+    // Paste at EXACT position (no offset)
+    mesh.position.set(d.px, d.py, d.pz);
+    mesh.rotation.set(d.rx, d.ry, d.rz);
+    mesh.scale.set(d.sx, d.sy, d.sz);
+    mesh.userData = { type: d.type, name: def.name, icon: def.icon, defKey: d.type, color: d.color, mat: d.mat || 'Default', note: d.note || '', locked: false, hidden: false };
+    scene.add(mesh); getRO().push({ id: objCnt++, type: d.type, mesh });
+  });
+  updateList(); updateStats(); syncLights(); pushH();
+  showToast('📋 Pasted in place (' + clipboard.length + ' objects)', 'success');
+}
+
+// ── 12. PATCH updateList TO UPDATE TITLE ──
+const _baseUpdateList = updateList;
+function updateList() {
+  _baseUpdateList();
+  updateDocTitle();
+}
+
+// ── 13. PATCH switchRoom TO UPDATE TITLE ──
+const _baseSwitchRoom = switchRoom;
+function switchRoom(i) {
+  _baseSwitchRoom(i);
+  updateDocTitle();
+}
+
+// ── 14. PATCH selectSingle TO HANDLE OBJ DIST ──
+const _baseSingleSel = selectSingle;
+function selectSingle(obj) {
+  if (obj && handleObjDistClick(obj)) return;
+  _baseSingleSel(obj);
+}
+
+// ── 15. PATCH mousemove DRAG TO SNAP TO OBJECTS TOO ──
+// We'll call snapToObjects right after snapToWall
+// This is done by patching the inline drag handler via a flag
+let _objSnapEnabled = true;
+function toggleObjSnap() {
+  _objSnapEnabled = !_objSnapEnabled;
+  showToast(_objSnapEnabled ? '🔲 Object snap ON' : '🔲 Object snap OFF');
+}
+
+// ── INIT v9 ──
+function initV9Features() {
+  loadSavedTheme();
+
+  // Ctrl+Shift+V = paste in place
+  document.addEventListener('keydown', function v9Keys(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.ctrlKey && e.shiftKey && (e.key === 'v' || e.key === 'V')) {
+      e.preventDefault(); pasteInPlace();
+    }
+    // Zoom to fit = Home key or Z
+    if (!e.ctrlKey && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+      e.preventDefault(); zoomToFit();
+    }
+  });
+
+  // Patch the existing drag mousemove to also snapToObjects
+  // We override by patching canvas mousemove after initial setup
+  const origMove = canvas.onmousemove;
+  // We inject snapToObjects into the existing handler by wrapping
+  const existingListeners = [];
+  // Since we can't easily patch event listeners, we add a new one
+  // that runs after the existing one and corrects the position
+  canvas.addEventListener('mousemove', function objSnapMove(e) {
+    if (isDrag && selObj && _objSnapEnabled && snapOn) {
+      snapToObjects(selObj.mesh);
+    }
+  });
+
+  updateDocTitle();
+}
 </script>
 
 <!-- STATS MODAL -->
@@ -1985,6 +2626,77 @@ function initV8Features() {
       <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">Ctrl+Z/Y</kbd> Undo/Redo<br>
       <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">G</kbd> Snap &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">M</kbd> Measure<br>
       <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">Shift+G</kbd> Group &nbsp; <kbd style="background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent);font-size:9px">?</kbd> This sheet</div>
+    </div>
+  </div>
+</div>
+
+<!-- BUNDLES MODAL -->
+<div id="bundles-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:900">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;max-width:480px;width:90vw;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px">🛋 Furniture Bundles</span>
+      <button onclick="closeBundles()" style="margin-left:auto;background:var(--panel2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 9px;cursor:pointer;font-size:10px">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:12px;cursor:pointer;transition:all .15s" onclick="applyBundle('Living Room Set')" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-weight:600;font-size:12px;margin-bottom:3px">🛋 Living Room Set</div>
+        <div style="font-size:10px;color:var(--text2)">Sofa + Coffee Table + TV + Rug + 2 Plants</div>
+      </div>
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:12px;cursor:pointer;transition:all .15s" onclick="applyBundle('Bedroom Set')" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-weight:600;font-size:12px;margin-bottom:3px">🛏 Bedroom Set</div>
+        <div style="font-size:10px;color:var(--text2)">Bed + Wardrobe + Desk + Curtain + Plant</div>
+      </div>
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:12px;cursor:pointer;transition:all .15s" onclick="applyBundle('Home Office Set')" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-weight:600;font-size:12px;margin-bottom:3px">💼 Home Office Set</div>
+        <div style="font-size:10px;color:var(--text2)">Desk + Chair + 2 Bookshelves + Plant</div>
+      </div>
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:12px;cursor:pointer;transition:all .15s" onclick="applyBundle('Kitchen Set')" onmouseover="this.style.borderColor='var(--accent)'" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-weight:600;font-size:12px;margin-bottom:3px">🍳 Kitchen Set</div>
+        <div style="font-size:10px;color:var(--text2)">2 Counters + Fridge + Sink + Dining Set</div>
+      </div>
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:12px;cursor:pointer;transition:all .15s" onclick="applyBundle('Bathroom Set')" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-weight:600;font-size:12px;margin-bottom:3px">🚿 Bathroom Set</div>
+        <div style="font-size:10px;color:var(--text2)">Bathtub + Shower + Toilet + Sink</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- THEME PICKER (injected into topbar via JS) -->
+<div id="theme-picker" style="position:fixed;top:60px;right:9px;background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:10px 12px;display:none;gap:8px;align-items:center;z-index:800;box-shadow:0 4px 20px rgba(0,0,0,.4)">
+  <span style="font-size:10px;color:var(--text2);margin-right:2px">🎨 Theme:</span>
+  <div class="theme-dot active" data-theme="Blue" onclick="applyUITheme('Blue')" style="width:20px;height:20px;border-radius:50%;background:#4f7cff;cursor:pointer;border:2px solid transparent;transition:.1s" title="Blue"></div>
+  <div class="theme-dot" data-theme="Purple" onclick="applyUITheme('Purple')" style="width:20px;height:20px;border-radius:50%;background:#8b5cf6;cursor:pointer;border:2px solid transparent;transition:.1s" title="Purple"></div>
+  <div class="theme-dot" data-theme="Green" onclick="applyUITheme('Green')" style="width:20px;height:20px;border-radius:50%;background:#10b981;cursor:pointer;border:2px solid transparent;transition:.1s" title="Green"></div>
+  <div class="theme-dot" data-theme="Orange" onclick="applyUITheme('Orange')" style="width:20px;height:20px;border-radius:50%;background:#f97316;cursor:pointer;border:2px solid transparent;transition:.1s" title="Orange"></div>
+  <div class="theme-dot" data-theme="Rose" onclick="applyUITheme('Rose')" style="width:20px;height:20px;border-radius:50%;background:#f43f5e;cursor:pointer;border:2px solid transparent;transition:.1s" title="Rose"></div>
+</div>
+
+<!-- BUNDLES MODAL -->
+<div id="bundles-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:900">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;max-width:440px;width:90vw;max-height:80vh;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px">🛋 Furniture Bundles</span>
+      <button onclick="closeBundlesModal()" style="margin-left:auto;padding:4px 9px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text2);font-size:10px;cursor:pointer">✕</button>
+    </div>
+    <div id="bundles-list" style="flex:1;overflow-y:auto;max-height:50vh"></div>
+  </div>
+</div>
+
+<!-- THEME COLOR MODAL -->
+<div id="theme-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:900">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;max-width:380px;width:90vw">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px">🎨 UI Color Theme</span>
+      <button onclick="closeThemeModal()" style="margin-left:auto;padding:4px 9px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text2);font-size:10px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      <div class="theme-color-btn" data-theme="Blue"   onclick="applyColorTheme('Blue')"   style="padding:12px;border-radius:8px;cursor:pointer;text-align:center;background:#1a1d27;border:1px solid #2e3250"><div style="width:24px;height:24px;border-radius:50%;background:#4f7cff;margin:0 auto 6px"></div><div style="font-size:10px;color:#e8eaf0">Blue</div></div>
+      <div class="theme-color-btn" data-theme="Purple" onclick="applyColorTheme('Purple')" style="padding:12px;border-radius:8px;cursor:pointer;text-align:center;background:#1a1d27;border:1px solid #2e3250"><div style="width:24px;height:24px;border-radius:50%;background:#8b5cf6;margin:0 auto 6px"></div><div style="font-size:10px;color:#e8eaf0">Purple</div></div>
+      <div class="theme-color-btn" data-theme="Green"  onclick="applyColorTheme('Green')"  style="padding:12px;border-radius:8px;cursor:pointer;text-align:center;background:#1a1d27;border:1px solid #2e3250"><div style="width:24px;height:24px;border-radius:50%;background:#10b981;margin:0 auto 6px"></div><div style="font-size:10px;color:#e8eaf0">Green</div></div>
+      <div class="theme-color-btn" data-theme="Orange" onclick="applyColorTheme('Orange')" style="padding:12px;border-radius:8px;cursor:pointer;text-align:center;background:#1a1d27;border:1px solid #2e3250"><div style="width:24px;height:24px;border-radius:50%;background:#f97316;margin:0 auto 6px"></div><div style="font-size:10px;color:#e8eaf0">Orange</div></div>
+      <div class="theme-color-btn" data-theme="Pink"   onclick="applyColorTheme('Pink')"   style="padding:12px;border-radius:8px;cursor:pointer;text-align:center;background:#1a1d27;border:1px solid #2e3250"><div style="width:24px;height:24px;border-radius:50%;background:#ec4899;margin:0 auto 6px"></div><div style="font-size:10px;color:#e8eaf0">Pink</div></div>
+      <div class="theme-color-btn" data-theme="Teal"   onclick="applyColorTheme('Teal')"   style="padding:12px;border-radius:8px;cursor:pointer;text-align:center;background:#1a1d27;border:1px solid #2e3250"><div style="width:24px;height:24px;border-radius:50%;background:#14b8a6;margin:0 auto 6px"></div><div style="font-size:10px;color:#e8eaf0">Teal</div></div>
     </div>
   </div>
 </div>
